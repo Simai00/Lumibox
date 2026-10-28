@@ -1,0 +1,72 @@
+esphome:
+  name: home-tonie
+  friendly_name: home-tonie
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# INFO statt DEBUG verhindert Buffer-Überläufe im Netzwerkstack
+logger:
+  level: INFO
+
+api:
+  reboot_timeout: 0s
+  encryption:
+    key: "rWZBz9DhkTZPT+Z4YD+znuwCejk3wrfQ9nIgE3h6Iek="
+
+ota:
+  - platform: esphome
+    encryption:
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: none
+  ap:
+    ssid: home-tonie Fallback Hotspot
+    password: "3zz5u3QPqIO5"
+
+captive_portal:
+
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [ pn5180 ]
+
+binary_sensor:
+  - platform: template
+    name: "Figur aufgelegt"
+    id: tag_present
+
+text_sensor:
+  - platform: template
+    name: "Aktive Figur UID"
+    id: active_tag_uid
+
+pn5180:
+  cs_pin: GPIO16
+  busy_pin: GPIO4
+  reset_pin: GPIO22
+  update_interval: 350ms
+  on_tag:
+    then:
+      - binary_sensor.template.publish:
+          id: tag_present
+          state: ON
+      - text_sensor.template.publish:
+          id: active_tag_uid
+          state: !lambda 'return x;'
+      - homeassistant.tag_scanned: !lambda 'return x;'
+  on_tag_removed:
+    then:
+      - binary_sensor.template.publish:
+          id: tag_present
+          state: OFF
+      - text_sensor.template.publish:
+          id: active_tag_uid
+          state: ""
+      - homeassistant.event:
+          event: esphome.tag_removed
