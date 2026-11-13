@@ -9,7 +9,7 @@ from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 
-from .library import to_ma_media
+from .library import InvalidMediaUri, to_ma_media
 
 
 class PlayerError(Exception):
@@ -50,7 +50,10 @@ class PlayerAdapter:
         return None if volume is None else float(volume)
 
     async def play(self, media_uri: str) -> None:
-        media_id, media_type = to_ma_media(media_uri)
+        try:
+            media_id, media_type = to_ma_media(media_uri)
+        except InvalidMediaUri as err:
+            raise PlayerError(f"Ungültige Medien-URI: {media_uri!r}") from err
         await self._call(
             "music_assistant",
             "play_media",

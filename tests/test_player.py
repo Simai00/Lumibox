@@ -109,3 +109,11 @@ async def test_service_error_becomes_player_error(hass):
     hass.states.async_set(ENTITY, "playing")
     with pytest.raises(PlayerError):
         await _adapter(hass).pause()
+
+
+async def test_invalid_uri_becomes_player_error(hass):
+    calls = async_mock_service(hass, "music_assistant", "play_media")
+    hass.states.async_set(ENTITY, "idle")
+    with pytest.raises(PlayerError):
+        await _adapter(hass).play("kein-spotify-link")
+    assert calls == []
