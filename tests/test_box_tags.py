@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import timedelta
 
 from homeassistant.components.persistent_notification import (
@@ -198,9 +199,16 @@ async def test_player_error_on_removal_does_not_raise(hass, box):
     box.player.available = False
     await box.ctrl.tag_off("04A1B2C3")
     await _advance(hass, 1.1)
-    assert box.led.shows[-1] in (("off", 0), ("error", 0))
+    assert box.led.shows[-1] == ("error", 0)
     assert box.ctrl.state is BoxState.IDLE
     assert box.ctrl.current_figure is None
+    # Player wieder da: nächstes Auflegen spielt normal.
+    box.player.available = True
+    box.player.calls.clear()
+    await box.ctrl.tag_on("04A1B2C3")
+    assert box.player.calls[-1] == ("play", BOBO_URI)
+    assert box.led.shows[-1] == ("playing", 0)
+    assert box.ctrl.state is BoxState.PLAYING
 
 
 async def test_handle_event_dispatches_tags(hass, box):
@@ -247,3 +255,74 @@ async def test_shutdown_cancels_debounce(hass, box):
     box.ctrl.async_shutdown()
     await _advance(hass, 1.1)
     assert ("pause",) not in box.player.calls
+
+
+async def _fire_removal_with_slow_pause(hass, box) -> asyncio.Event:
+    """A spielt, wird abgenommen; die Entprellung läuft ab, pause() hängt am Gate."""
+    await box.ctrl.tag_on("04A1B2C3")
+    await box.ctrl.tag_off("04A1B2C3")
+    gate = asyncio.Event()
+    box.player.pause_gate = gate
+    # Kein async_block_till_done: Die Abnahme-Task hängt bewusst in pause().
+    async_fire_time_changed_exact(hass, dt_util.utcnow() + timedelta(seconds=1.1))
+    for _ in range(5):
+        await asyncio.sleep(0)
+    return gate
+
+
+async def test_same_figure_back_during_slow_pause_resumes(hass, box):
+    """Race (a): A kommt zurück, während pause() nach der Entprellung noch läuft."""
+    gate = await _fire_removal_with_slow_pause(hass, box)
+    tag_on = asyncio.create_task(box.ctrl.tag_on("04A1B2C3"))
+    for _ in range(5):
+        await asyncio.sleep(0)
+    gate.set()
+    await tag_on
+    await hass.async_block_till_done()
+    assert box.player.calls[-2:] == [("pause",), ("resume",)]
+    assert box.led.shows[-1] == ("playing", 0)
+    assert box.ctrl.state is BoxState.PLAYING
+    assert box.ctrl.current_figure.name == "Bobo"
+
+
+async def test_other_figure_during_slow_pause_keeps_playing(hass, box):
+    """Race (b): B wird aufgelegt, während pause(A) noch läuft."""
+    gate = await _fire_removal_with_slow_pause(hass, box)
+    tag_on = asyncio.create_task(box.ctrl.tag_on("04B7C8D9"))
+    for _ in range(5):
+        await asyncio.sleep(0)
+    gate.set()
+    await tag_on
+    await hass.async_block_till_done()
+    assert box.player.calls[-1] == ("play", FEUERWEHR_URI)
+    assert box.player.calls.index(("pause",)) < box.player.calls.index(("play", FEUERWEHR_URI))
+    assert box.led.shows[-1] == ("playing", 0)
+    assert box.ctrl.state is BoxState.PLAYING
+    assert box.ctrl.current_figure.name == "Feuerwehr"
+
+
+async def test_tag_on_queued_before_removal_task_wins(hass, box):
+    """tag_on(A) steht vor der Abnahme-Task am Lock: Abnahme ist überholt, A spielt weiter."""
+    await box.ctrl.tag_on("04A1B2C3")
+    await box.ctrl.tag_off("04A1B2C3")
+    calls_before = list(box.player.calls)
+    async with box.ctrl._lock:  # Lock halten, damit beide warten müssen
+        tag_on = asyncio.create_task(box.ctrl.tag_on("04A1B2C3"))
+        await asyncio.sleep(0)  # tag_on wartet zuerst am Lock
+        async_fire_time_changed_exact(hass, dt_util.utcnow() + timedelta(seconds=1.1))
+        for _ in range(5):
+            await asyncio.sleep(0)
+    await tag_on
+    await hass.async_block_till_done()
+    assert box.player.calls == calls_before  # kein pause, kein zweites play
+    assert box.ctrl.state is BoxState.PLAYING
+    assert box.ctrl.current_figure.name == "Bobo"
+
+
+async def test_shutdown_cancels_running_removal(hass, box):
+    gate = await _fire_removal_with_slow_pause(hass, box)
+    box.ctrl.async_shutdown()
+    await asyncio.sleep(0)
+    gate.set()
+    await hass.async_block_till_done()
+    assert box.ctrl.state is BoxState.PLAYING  # Abnahme wurde abgebrochen

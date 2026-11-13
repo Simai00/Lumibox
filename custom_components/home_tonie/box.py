@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
@@ -104,6 +105,11 @@ class BoxController:
 
         self._pending_off_uid: str | None = None
         self._cancel_debounce: CALLBACK_TYPE | None = None
+        self._removal_task: asyncio.Task[None] | None = None
+        # Serialisiert alle zustandsändernden Abläufe der Box (auch Task 6: Taster/Encoder).
+        self._lock = asyncio.Lock()
+        # Zählt tag_on-Ereignisse; eine Abnahme mit veraltetem Stand wird verworfen.
+        self._tag_seq = 0
 
     # --- Öffentliche Eigenschaften -------------------------------------
 
@@ -170,6 +176,12 @@ class BoxController:
         if not norm:
             _LOGGER.debug("tag_on ohne gültige UID (%r) ignoriert", uid)
             return
+        async with self._lock:
+            # Eine bereits ausgelöste, aber noch wartende Abnahme ist damit überholt.
+            self._tag_seq += 1
+            await self._tag_on_locked(norm)
+
+    async def _tag_on_locked(self, norm: str) -> None:
         figure = self._library.lookup(norm)
 
         if self._cancel_debounce is not None:
@@ -204,22 +216,26 @@ class BoxController:
     async def tag_off(self, uid: str) -> None:
         """Figur abgenommen: Entprellung starten (Spec 6.2 tag_off)."""
         norm = normalize_uid(uid)
-        if self._cancel_debounce is not None:
-            if self._pending_off_uid == norm:
-                return
-            # Ein anderes Tag war noch in der Entprellung: jetzt abschliessen.
-            pending_uid = self._pending_off_uid
-            self._cancel_timer()
-            await self._finish_removal(pending_uid)
-        self._pending_off_uid = norm
-        self._cancel_debounce = async_call_later(
-            self._hass, REMOVAL_DEBOUNCE_S, self._debounce_elapsed
-        )
+        async with self._lock:
+            if self._cancel_debounce is not None:
+                if self._pending_off_uid == norm:
+                    return
+                # Ein anderes Tag war noch in der Entprellung: jetzt abschliessen.
+                pending_uid = self._pending_off_uid
+                self._cancel_timer()
+                await self._finish_removal(pending_uid)
+            self._pending_off_uid = norm
+            self._cancel_debounce = async_call_later(
+                self._hass, REMOVAL_DEBOUNCE_S, self._debounce_elapsed
+            )
 
     @callback
     def async_shutdown(self) -> None:
-        """Entprell-Timer abbrechen (beim Entladen)."""
+        """Entprell-Timer und laufende Abnahme abbrechen (beim Entladen)."""
         self._cancel_timer()
+        if self._removal_task is not None and not self._removal_task.done():
+            self._removal_task.cancel()
+        self._removal_task = None
 
     # --- Interna --------------------------------------------------------
 
@@ -234,10 +250,22 @@ class BoxController:
         uid = self._pending_off_uid
         self._cancel_debounce = None
         self._pending_off_uid = None
-        self._hass.async_create_task(self._finish_removal(uid))
+        self._removal_task = self._hass.async_create_task(
+            self._removal_after_debounce(uid, self._tag_seq),
+            f"home_tonie Abnahme {self._config.name}",
+        )
+
+    async def _removal_after_debounce(self, uid: str | None, seq: int) -> None:
+        """Abnahme nach Ablauf der Entprellung, serialisiert über den Lock."""
+        async with self._lock:
+            if seq != self._tag_seq:
+                # Inzwischen wurde eine Figur aufgelegt: Diese Abnahme ist überholt.
+                _LOGGER.debug("Abnahme von %s überholt, ignoriert", uid)
+                return
+            await self._finish_removal(uid)
 
     async def _finish_removal(self, uid: str | None) -> None:
-        """Abnehmen nach der Entprellung abschliessen."""
+        """Abnehmen abschliessen; Aufrufer hält den Lock."""
         figure = self._current_figure
         if figure is None or uid is None or normalize_uid(figure.uid) != uid:
             await self._led.show(LED_OFF)

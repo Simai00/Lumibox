@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from custom_components.home_tonie.player import PlayerError, PlayerSnapshot
 
 
@@ -20,6 +22,8 @@ class FakePlayer:
         self.volume = volume
         self.available = available
         self.calls: list[tuple] = []
+        # Ist ein Event gesetzt, wartet pause() darauf (simuliert einen langsamen Service-Aufruf).
+        self.pause_gate: asyncio.Event | None = None
 
     def is_available(self) -> bool:
         return self.available
@@ -49,6 +53,8 @@ class FakePlayer:
 
     async def pause(self) -> None:
         self._check()
+        if self.pause_gate is not None:
+            await self.pause_gate.wait()
         self.calls.append(("pause",))
         self.state = "paused"
 
