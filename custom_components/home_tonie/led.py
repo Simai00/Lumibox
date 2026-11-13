@@ -16,12 +16,16 @@ def esphome_node_name(hass: HomeAssistant, device_id: str) -> str | None:
     device = dr.async_get(hass).async_get(device_id)
     if device is None:
         return None
-    if device.config_entry_id is None:
-        return None
-    entry = hass.config_entries.async_get_entry(device.config_entry_id)
-    if entry is None or entry.domain != "esphome":
-        return None
-    return entry.data.get("device_name")
+    # Neuere HA: einzelne config_entry_id; HA 2025.4: nur das Set config_entries.
+    if hasattr(device, "config_entry_id"):
+        entry_ids = [device.config_entry_id] if device.config_entry_id else []
+    else:
+        entry_ids = list(device.config_entries)
+    for entry_id in entry_ids:
+        entry = hass.config_entries.async_get_entry(entry_id)
+        if entry is not None and entry.domain == "esphome":
+            return entry.data.get("device_name")
+    return None
 
 
 class LedAdapter:
