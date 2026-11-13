@@ -16,11 +16,13 @@ from homeassistant.helpers.event import async_call_later
 
 from .const import (
     LED_ERROR,
+    LED_HOLD,
     LED_LOADING,
     LED_OFF,
     LED_PAUSED,
     LED_PLAYING,
     LED_UNKNOWN,
+    LED_VOLUME,
     REMOVAL_DEBOUNCE_S,
 )
 from .library import Figure, FigureLibrary, normalize_uid
@@ -168,6 +170,17 @@ class BoxController:
             else:
                 await self.tag_off(uid)
             return
+        handlers = {
+            "play_pause": self.play_pause,
+            "next": self.next_track,
+            "prev": self.previous_track,
+        }
+        if action in handlers:
+            await handlers[action]()
+            return
+        if action in ("rotate_cw", "rotate_ccw"):
+            await self.rotate(1 if action == "rotate_cw" else -1)
+            return
         _LOGGER.debug("Unbekannte Aktion %r von Box %s ignoriert", action, self._config.name)
 
     async def tag_on(self, uid: str) -> None:
@@ -228,6 +241,75 @@ class BoxController:
             self._cancel_debounce = async_call_later(
                 self._hass, REMOVAL_DEBOUNCE_S, self._debounce_elapsed
             )
+
+    # --- Taster und Encoder (Spec 6.3) -----------------------------------
+
+    def _controls_active(self) -> bool:
+        """Taster/Encoder wirken nur mit Figur und nicht während des Ladens."""
+        return self._current_figure is not None and self._state in (
+            BoxState.PLAYING,
+            BoxState.PAUSED_BY_BOX,
+        )
+
+    async def _control_failed(self, what: str, err: PlayerError) -> None:
+        _LOGGER.warning("Box %s: %s fehlgeschlagen: %s", self._config.name, what, err)
+        await self._led.show(LED_ERROR)
+
+    async def play_pause(self) -> None:
+        """Taster: zwischen Pause und Wiedergabe wechseln."""
+        async with self._lock:
+            if not self._controls_active():
+                return
+            figure = self._current_figure
+            try:
+                if self._state is BoxState.PLAYING:
+                    await self._player.pause()
+                    await self._led.show(LED_HOLD)
+                    self._set(BoxState.PAUSED_BY_BOX, figure)
+                else:
+                    await self._cap_volume()
+                    await self._player.resume()
+                    await self._led.show(LED_PLAYING)
+                    self._set(BoxState.PLAYING, figure)
+            except PlayerError as err:
+                await self._control_failed("Play/Pause", err)
+
+    async def next_track(self) -> None:
+        """Taster: nächster Titel."""
+        async with self._lock:
+            if not self._controls_active():
+                return
+            try:
+                await self._player.next_track()
+            except PlayerError as err:
+                await self._control_failed("Nächster Titel", err)
+
+    async def previous_track(self) -> None:
+        """Taster: vorheriger Titel."""
+        async with self._lock:
+            if not self._controls_active():
+                return
+            try:
+                await self._player.previous_track()
+            except PlayerError as err:
+                await self._control_failed("Vorheriger Titel", err)
+
+    async def rotate(self, direction: int) -> None:
+        """Encoder: Lautstärke um volume_step ändern (+1 lauter, -1 leiser)."""
+        async with self._lock:
+            if not self._controls_active():
+                return
+            try:
+                volume = self._player.get_volume()
+                base = 0 if volume is None else round(volume * 100)
+                step = self._config.volume_step * (1 if direction > 0 else -1)
+                max_volume = self._config.max_volume
+                new = max(0, min(max_volume, base + step))
+                await self._player.set_volume(new / 100)
+                level = round(new / max_volume * 100) if max_volume else 0
+                await self._led.show(LED_VOLUME, level)
+            except PlayerError as err:
+                await self._control_failed("Lautstärke", err)
 
     @callback
     def async_shutdown(self) -> None:
