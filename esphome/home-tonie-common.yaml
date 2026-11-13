@@ -1,0 +1,344 @@
+# Gemeinsame Firmware für alle Home-Tonie-Boxen.
+# Pro Box: substitutions (device_name, friendly_name) + packages: common: !include home-tonie-common.yaml
+# Die Box ist "dumm": sie sendet nur Events (esphome.home_tonie) und setzt LEDs über die API-Action set_led.
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+  comment: "ESP32 + PN532 (SPI), Encoder, Taster, LED-Ring"
+  on_boot:
+    priority: -100
+    then:
+      - logger.log: "Home Tonie gestartet"
+      - script.execute: led_restore
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+  level: INFO
+
+api:
+  reboot_timeout: 0s
+  actions:
+    - action: set_led
+      variables:
+        mode: string
+        level: int
+      then:
+        - script.execute:
+            id: led_show
+            mode: !lambda 'return mode;'
+            level: !lambda 'return level;'
+
+ota:
+  platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: none
+  ap:
+    ssid: "${friendly_name} Fallback"
+    password: !secret wifi_ap_password
+
+captive_portal:
+
+spi:
+  clk_pin: GPIO18
+  miso_pin: GPIO19
+  mosi_pin: GPIO23
+
+# Events: homeassistant.event mit event "esphome.home_tonie" und Feld "action".
+# Kein Feld "device_id" senden: HA ergänzt die echte Geräte-ID selbst.
+pn532_spi:
+  id: nfc_reader
+  cs_pin: GPIO16
+  update_interval: 250ms
+  on_tag:
+    then:
+      - homeassistant.event:
+          event: esphome.home_tonie
+          data:
+            action: tag_on
+            uid: !lambda 'return x;'
+  on_tag_removed:
+    then:
+      - homeassistant.event:
+          event: esphome.home_tonie
+          data:
+            action: tag_off
+            uid: !lambda 'return x;'
+
+sensor:
+  - platform: rotary_encoder
+    id: volume_encoder
+    name: "Lautstärke-Encoder"
+    internal: true
+    pin_a:
+      number: GPIO32
+      mode:
+        input: true
+        pullup: true
+    pin_b:
+      number: GPIO33
+      mode:
+        input: true
+        pullup: true
+    filters:
+      - debounce: 10ms
+    on_clockwise:
+      - homeassistant.event:
+          event: esphome.home_tonie
+          data:
+            action: rotate_cw
+    on_anticlockwise:
+      - homeassistant.event:
+          event: esphome.home_tonie
+          data:
+            action: rotate_ccw
+
+binary_sensor:
+  - platform: gpio
+    id: encoder_button
+    name: "Play Pause"
+    internal: true
+    pin:
+      number: GPIO25
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    filters:
+      - delayed_on: 15ms
+      - delayed_off: 15ms
+    on_press:
+      - homeassistant.event:
+          event: esphome.home_tonie
+          data:
+            action: play_pause
+
+  - platform: gpio
+    id: button_prev
+    name: "Vorheriger Titel"
+    internal: true
+    pin:
+      number: GPIO26
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    filters:
+      - delayed_on: 15ms
+      - delayed_off: 15ms
+    on_press:
+      - homeassistant.event:
+          event: esphome.home_tonie
+          data:
+            action: prev
+
+  - platform: gpio
+    id: button_next
+    name: "Nächster Titel"
+    internal: true
+    pin:
+      number: GPIO27
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    filters:
+      - delayed_on: 15ms
+      - delayed_off: 15ms
+    on_press:
+      - homeassistant.event:
+          event: esphome.home_tonie
+          data:
+            action: next
+
+# --- LED-Ring: wird ausschliesslich über set_led gesteuert ---
+globals:
+  # Dauer-Modus, zu dem nach volume/Übergangsmodi zurückgekehrt wird: off | loading | playing | hold
+  - id: led_persistent
+    type: std::string
+    initial_value: '"off"'
+  - id: led_level
+    type: int
+    initial_value: '0'
+
+light:
+  - platform: esp32_rmt_led_strip
+    id: status_led_ring
+    name: "Statuslicht"
+    internal: true
+    pin: GPIO21
+    num_leds: 24
+    chipset: WS2812
+    rgb_order: GRB
+    # Harte Helligkeitsobergrenze (Strom, Blendung), gilt für alle Effekte.
+    color_correct: [50%, 50%, 50%]
+    restore_mode: ALWAYS_OFF
+    default_transition_length: 0s
+    effects:
+      - pulse:
+          name: "Atmen"
+          transition_length: 1.5s
+          update_interval: 1.5s
+          min_brightness: 20%
+          max_brightness: 100%
+
+      # Lade-Spinner: rotierender Punkt mit Schweif
+      - addressable_lambda:
+          name: "Lade-Spinner"
+          update_interval: 45ms
+          lambda: |-
+            static int pos = 0;
+            it.all() = Color::BLACK;
+            it[pos % it.size()] = current_color;
+            it[(pos + it.size() - 1) % it.size()] = current_color * 140;
+            it[(pos + it.size() - 2) % it.size()] = current_color * 60;
+            it[(pos + it.size() - 3) % it.size()] = current_color * 20;
+            pos = (pos + 1) % it.size();
+
+      # Lautstärke-Anzeige: led_level (0-100) als Füllstand
+      - addressable_lambda:
+          name: "Pegel"
+          update_interval: 50ms
+          lambda: |-
+            int lvl = id(led_level);
+            if (lvl < 0) lvl = 0;
+            if (lvl > 100) lvl = 100;
+            int n = (lvl * it.size() + 50) / 100;
+            it.all() = Color::BLACK;
+            for (int i = 0; i < n && i < it.size(); i++) {
+              it[i] = current_color;
+            }
+
+script:
+  # Stellt den Dauer-Modus (led_persistent) wieder her.
+  - id: led_restore
+    mode: restart
+    then:
+      - if:
+          condition:
+            lambda: 'return id(led_persistent) == "loading";'
+          then:
+            - light.turn_on:
+                id: status_led_ring
+                brightness: 100%
+                red: 100%
+                green: 100%
+                blue: 100%
+                effect: "Lade-Spinner"
+          else:
+            - if:
+                condition:
+                  lambda: 'return id(led_persistent) == "playing";'
+                then:
+                  - light.turn_on:
+                      id: status_led_ring
+                      brightness: 60%
+                      red: 100%
+                      green: 70%
+                      blue: 35%
+                      effect: "Atmen"
+                else:
+                  - if:
+                      condition:
+                        lambda: 'return id(led_persistent) == "hold";'
+                      then:
+                        # statisch warmweiss, 10 %
+                        - light.turn_on:
+                            id: status_led_ring
+                            brightness: 10%
+                            red: 100%
+                            green: 70%
+                            blue: 35%
+                            effect: "None"
+                      else:
+                        - light.turn_off:
+                            id: status_led_ring
+                            transition_length: 0s
+
+  # Setzt einen LED-Modus. Neuer Aufruf bricht laufende Übergangsmodi ab.
+  - id: led_show
+    mode: restart
+    parameters:
+      mode: string
+      level: int
+    then:
+      - if:
+          condition:
+            lambda: 'return mode == "off" || mode == "loading" || mode == "playing" || mode == "hold";'
+          then:
+            - lambda: 'id(led_persistent) = mode;'
+            - script.execute: led_restore
+          else:
+            - if:
+                condition:
+                  lambda: 'return mode == "volume";'
+                then:
+                  - lambda: 'id(led_level) = level;'
+                  - light.turn_on:
+                      id: status_led_ring
+                      brightness: 100%
+                      red: 100%
+                      green: 100%
+                      blue: 100%
+                      effect: "Pegel"
+                  - delay: 1.5s
+                  - script.execute: led_restore
+                else:
+                  # paused, unknown, error: enden immer bei off
+                  - lambda: 'id(led_persistent) = "off";'
+                  - if:
+                      condition:
+                        lambda: 'return mode == "paused";'
+                      then:
+                        - light.turn_off:
+                            id: status_led_ring
+                            transition_length: 1.5s
+                        - delay: 1.5s
+                        - script.execute: led_restore
+                      else:
+                        - if:
+                            condition:
+                              lambda: 'return mode == "unknown";'
+                            then:
+                              # 3x rot blinken, ca. 2 s
+                              - repeat:
+                                  count: 3
+                                  then:
+                                    - light.turn_on:
+                                        id: status_led_ring
+                                        brightness: 100%
+                                        red: 100%
+                                        green: 0%
+                                        blue: 0%
+                                        effect: "None"
+                                    - delay: 350ms
+                                    - light.turn_off:
+                                        id: status_led_ring
+                                        transition_length: 0s
+                                    - delay: 300ms
+                              - script.execute: led_restore
+                            else:
+                              - if:
+                                  condition:
+                                    lambda: 'return mode == "error";'
+                                  then:
+                                    - light.turn_on:
+                                        id: status_led_ring
+                                        brightness: 100%
+                                        red: 100%
+                                        green: 0%
+                                        blue: 0%
+                                        effect: "None"
+                                    - delay: 3s
+                                    - script.execute: led_restore
+                                  else:
+                                    - logger.log:
+                                        format: "Unbekannter LED-Modus: %s"
+                                        args: ['mode.c_str()']
