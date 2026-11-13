@@ -136,7 +136,7 @@ Die Box definiert unter `api: actions:` eine Action `set_led` mit den Variablen 
 
 ### 4.4 Voraussetzung in HA
 
-In den Optionen der ESPHome-Integration muss für jede Box **„Allow the device to perform Home Assistant actions“** aktiviert sein. Ob das für das Senden von Events zwingend ist, wird in der Umsetzung verifiziert (siehe Abschnitt 10).
+„Allow the device to perform Home Assistant actions“ ist für das Senden von Events **nicht** nötig (verifiziert, Abschnitt 10 Punkt 1). Die Option betrifft nur Aktionen, die die Box in HA auslöst. Die Aktion `esphome.<node>_set_led` (HA → Box) braucht sie ebenfalls nicht. Die Firmware darf in Event-Daten kein Feld `device_id` senden.
 
 ## 5. Integration `home_tonie`
 
@@ -294,11 +294,11 @@ Liegt keine Figur auf, werden Taster und Encoder ignoriert.
 
 1. In Music Assistant **pro Box einen Spotify-Provider** mit je eigenem Premium-Account einrichten (z. B. die Konten eines Family-Abos). Dazu je nach Lautsprecher den **Sonos-** bzw. **AirPlay-Provider** einrichten.
 2. In Music Assistant **pro Kind einen Benutzer** anlegen (z. B. `anna`, `ben`). Dessen Anbieterfilter erlaubt nur den eigenen Spotify-Account.
-3. Box flashen (`home-tonie-<kind>.yaml`). In HA die Box zur ESPHome-Integration hinzufügen und HA-Actions erlauben.
+3. Box flashen (`home-tonie-<kind>.yaml`). In HA die Box zur ESPHome-Integration hinzufügen. „HA-Actions erlauben“ ist nicht nötig.
 4. `custom_components/home_tonie` installieren (HACS als benutzerdefiniertes Repository oder manuell kopieren) und HA neu starten.
 5. „Home Tonie“ hinzufügen → Box hinzufügen → Figuren durch Auflegen anlernen.
 
-Mindestversion HA: die erste Version mit Config-Subentries inkl. Reconfigure. Die genaue Versionsnummer wird in `manifest.json`/`hacs.json` bei der Umsetzung festgelegt.
+Mindestversion HA: **2025.4.0** (verifiziert, Abschnitt 10 Punkt 4). Sie wird in `hacs.json` eingetragen.
 
 ## 10. Offene Punkte / bei Umsetzung zu verifizieren
 
@@ -307,10 +307,11 @@ Stand der Recherche: 2026-11-13, gegen HA-Core `dev` (2026.12) und die Music-Ass
 1. **ESPHome-Event enthält `device_id`** – ✅ verifiziert.
    - `async_on_service_call` in `esphome/manager.py` feuert bei `service.is_event` per `hass.bus.async_fire("esphome.<name>", {ATTR_DEVICE_ID: device_id, **service_data})`. `device_id` ist `entry_data.main_device_entry_id` (Geräte-Registry-ID der Box; Typ `str | None`).
    - „HA-Actions erlauben“ (`allow_service_calls`) ist für Events **nicht** nötig: Die Option gated nur den `elif`-Zweig für echte Service-Aufrufe (nicht `is_event`). Die Option ist für `esphome.<node>_set_led` (HA → Gerät) nicht relevant, weil das ein von HA registrierter Dienst ist. In Abschnitt 9 Punkt 3 kann „HA-Actions erlauben“ entfallen. Es schadet aber nicht.
+   - **Firmware darf kein Feld `device_id` in den Event-Daten senden** (Tasks 8/9): Der Code baut `{ATTR_DEVICE_ID: device_id, **service_data}`, ein Gerätefeld gleichen Namens würde die echte ID überschreiben. Die Feldnamen der Firmware (z. B. `tag_uid`) so wählen, dass sie nicht kollidieren.
    - Einschränkung: Event-Name muss `esphome.*` lauten. Daten aus dem Gerät kommen als Strings/Zahlen in `event.data`.
    - Quelle: https://github.com/home-assistant/core/blob/dev/homeassistant/components/esphome/manager.py (Zeilen ~327–375)
    - Der `box`-Fallback ist nicht nötig, wird aber als Reserve behalten (`main_device_entry_id` kann `None` sein; dann Event ignorieren und loggen).
-2. **ESPHome-Knotenname** – ✅ verifiziert. Der ESPHome-Config-Entry hat `entry.data["device_name"]` (`CONF_DEVICE_NAME = "device_name"`, Bindestriche wie in der YAML). Der Dienstname lautet `esphome.<device_name mit "-" → "_">_<service>`, also `esphome.home_tonie_anna_set_led` für `home-tonie-anna` (`manager.py`, Funktion zur Dienstnamen-Bildung: `device_info.name.replace('-', '_')`). Weg: `device_registry.async_get(device_id)` → `config_entries` → Entry mit `domain == "esphome"` → `entry.data["device_name"]`. Quellen: `esphome/const.py`, `esphome/manager.py` (dev).
+2. **ESPHome-Knotenname** – ✅ verifiziert. Der ESPHome-Config-Entry hat `entry.data["device_name"]` (`CONF_DEVICE_NAME = "device_name"`, Bindestriche wie in der YAML). Der Dienstname lautet `esphome.<device_name mit "-" → "_">_<service>`, also `esphome.home_tonie_anna_set_led` für `home-tonie-anna` (`esphome/manager.py` Zeile 1659–1661, `build_service_name`: `return f"{device_info.name.replace('-', '_')}_{service.name}"`; Stand dev, Zeilennummer kann driften). Weg: `device_registry.async_get(device_id)` → `config_entries` → Entry mit `domain == "esphome"` → `entry.data["device_name"]`. Quellen: `esphome/const.py`, `esphome/manager.py` (dev).
 3. **Music Assistant `media_type`/URI** – ✅ verifiziert, mit **Korrektur**.
    - Schema von `music_assistant.play_media`: `media_id` (Liste), `media_type` optional (`Coerce(MediaType)`), `enqueue` (`play|replace|next|replace_next|add`), `radio_mode`, `shuffle`, `start_item`, `username`. Quelle: `homeassistant/components/music_assistant/services.py` (dev).
    - `MediaType`-Werte (music_assistant_models): `artist, album, track, playlist, radio, audiobook, podcast, podcast_episode, folder, …`. Unbekannte Strings werden still zu `unknown`, es gibt keinen Fehler. Die UI-Auswahl in `services.yaml` listet `podcast_episode` nicht, der Wert ist aber gültig.
@@ -321,7 +322,7 @@ Stand der Recherche: 2026-11-13, gegen HA-Core `dev` (2026.12) und die Music-Ass
 4. **Config-Subentries** – ✅ verifiziert (HA-Core dev, `config_entries.py`).
    - Namen unverändert gültig: `ConfigFlow.async_get_supported_subentry_types(config_entry) -> dict[str, type[ConfigSubentryFlow]]`, `ConfigSubentryFlow` mit `async_step_reconfigure`, `self._get_reconfigure_subentry()`, `self._get_entry()`, `self.async_update_and_abort(entry, subentry, data=… | data_updates=…, title=…, unique_id=…, reason=…)`, `self.async_create_entry(title, data, unique_id=…)`. `async_add_entities(entities, config_subentry_id=…)` existiert (`helpers/entity_platform.py`).
    - **Erste Version mit Subentry-Reconfigure: 2025.3.** (`2025.2.0` hat noch kein `ConfigSubentryFlow`.) In 2025.3 hiess die Methode auf dem Subentry-Flow noch `_get_reconfigure_entry()`; sie wurde in **2025.4** (PR #141017, 2025-03-24) zu `_get_entry()` umbenannt. Der Name `_get_entry()` ist deshalb erst ab 2025.4 vorhanden.
-   - **Mindestversion HA: 2025.4.0** (Task 10: `hacs.json` `"homeassistant": "2025.4.0"`, ggf. in `manifest.json`-Hinweis). Der Code verwendet `_get_entry()`.
+   - **Mindestversion HA: 2025.4.0** (Task 10: `hacs.json` `"homeassistant": "2025.4.0"`, ggf. in `manifest.json`-Hinweis). Task 7: `_get_reconfigure_subentry()` für das bearbeitete Subentry und `_get_entry()` für den übergeordneten `ConfigEntry` verwenden. `_get_reconfigure_subentry()` existiert schon in 2025.3.0 (und 3.4) und in 2025.4.0 (geprüft per Tag-Vergleich von `config_entries.py`); entscheidend für 2025.4 ist `_get_entry()`: In 2025.3.x heisst es im Subentry-Flow `_get_reconfigure_entry()`, ab 2025.4.0 ist es `_get_entry()`.
    - Doku-Hinweis: Die Entwicklerdoku (contributors.home-assistant.io/core/integrations/config-flow/) beschreibt Subentry-Reconfigure nicht ausführlich; die Quelle ist der Core-Code.
    - Test-Tooling: `pytest-homeassistant-custom-component` 0.13.375 (2026-10-25, PyPI), pinnt `homeassistant==2026.10.4`, `requires_python >=3.14`. Die Test-Umgebung (Task 1/CI) braucht deshalb Python 3.14. Tests laufen gegen 2026.10.4, nicht gegen die Mindestversion.
 5. **Spotify-Anbieterfilter/`username`-Spike** – offen – manueller Test durch Nutzer.
