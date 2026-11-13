@@ -1,0 +1,14 @@
+{
+  "domain": "home_tonie",
+  "name": "Home Tonie",
+  "after_dependencies": ["esphome", "music_assistant"],
+  "codeowners": ["@Simai00"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/Simai00/home-tonie",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/Simai00/home-tonie/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "0.1.0"
+}

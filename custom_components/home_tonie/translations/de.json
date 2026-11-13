@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Home Tonie",
+        "description": "Home Tonie einrichten? Boxen und Figuren werden danach auf der Integrationsseite hinzugefügt."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Bereits konfiguriert. Nur eine einzige Konfiguration möglich."
+    }
+  }
+}
