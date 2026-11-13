@@ -128,6 +128,11 @@ Die Box definiert unter `api: actions:` eine Action `set_led` mit den Variablen 
 - Die Licht-Entität wird `internal: true`, da sie ausschliesslich über `set_led` gesteuert wird.
 - Bestehende Effekte (Regenbogen, Funkeln …) dürfen in der Firmware bleiben, werden aber nicht genutzt.
 - Ohne Figur ist der Ring aus. Nach `paused`, `unknown` und `error` landet er immer bei `off`.
+- **Helligkeitsobergrenze:** `color_correct: [50%, 50%, 50%]` am `esp32_rmt_led_strip`.
+  - Grund: 24 LEDs ziehen bei vollem Weiss bis ~1,44 A. Das ist zu viel für den 5V-Pfad über USB des ESP32-Boards und im Kinderzimmer zu grell.
+  - Mit der Kappung liegt der schlimmste Fall bei ~0,7 A, der Normalbetrieb deutlich unter 200 mA.
+  - Die Grenze gilt für alle Effekte und lässt sich auch von HA nicht überschreiten.
+  - Hardware-Schutzbeschaltung siehe README.
 
 ### 4.4 Voraussetzung in HA
 
@@ -186,7 +191,7 @@ Ein ESPHome-Gerät darf nur einer Box zugeordnet sein (Validierung im Flow). Zwe
 | `led.py` | `LedAdapter`: `show(mode, level=0)` → ruft `esphome.<node>_set_led` auf; ermittelt `<node>` aus dem Device Registry | `hass.services` |
 | `box.py` | `BoxController` pro Box: Zustandsautomat aus Abschnitt 6 | Library, Player-/LedAdapter (injiziert) |
 | `sensor.py` | Pro Box: `sensor.<box>_aktuelle_figur`, `sensor.<box>_letzter_unbekannter_tag` | BoxController (Listener) |
-| `__init__.py` | Setup/Unload, abonniert `esphome.home_tonie`, verteilt per `device_id` an den richtigen `BoxController`, lädt bei Subentry-Änderung neu | alle |
+| `__init__.py` | Setup/Unload, abonniert `esphome.home_tonie`, verteilt per `device_id` an den richtigen `BoxController`. Bei Änderungen an Figuren wird nur die Bibliothek aktualisiert (kein Reload, laufende Wiedergabe bleibt unberührt); bei Änderungen an Boxen wird neu geladen | alle |
 
 `BoxController` hängt nur von den Adaptern ab. So lässt er sich ohne echte Lautsprecher testen.
 
