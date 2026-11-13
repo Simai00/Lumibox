@@ -14,7 +14,8 @@ _SPOTIFY_TYPES = "album|playlist|track|artist|show|episode|audiobook"
 _SPOTIFY_RE = re.compile(
     rf"^(?:spotify:(?P<t1>{_SPOTIFY_TYPES}):"
     rf"|https?://open\.spotify\.com/(?:intl-[A-Za-z]+/)?(?P<t2>{_SPOTIFY_TYPES})/)"
-    r"(?P<id>[A-Za-z0-9]{22})(?:[?#].*)?$"
+    r"(?P<id>[A-Za-z0-9]{22})/?(?:[?#].*)?$",
+    re.IGNORECASE,
 )
 _MA_TYPES = {"show": "podcast", "episode": "podcast_episode"}
 
@@ -24,8 +25,8 @@ class InvalidMediaUri(ValueError):
 
 
 def normalize_uid(raw: str) -> str:
-    """UID in Grossbuchstaben ohne Trenner (Bindestrich, Doppelpunkt, Leerraum)."""
-    return re.sub(r"[\s:\-]", "", raw).upper()
+    """UID in Grossbuchstaben, alle Nicht-Hex-Zeichen entfernt."""
+    return re.sub(r"[^0-9A-Fa-f]", "", raw).upper()
 
 
 def normalize_spotify_uri(raw: str) -> str:
@@ -33,7 +34,7 @@ def normalize_spotify_uri(raw: str) -> str:
     match = _SPOTIFY_RE.match(raw.strip())
     if not match:
         raise InvalidMediaUri(raw)
-    return f"spotify:{match['t1'] or match['t2']}:{match['id']}"
+    return f"spotify:{(match['t1'] or match['t2']).lower()}:{match['id']}"
 
 
 def to_ma_media(uri: str) -> tuple[str, str]:
@@ -63,7 +64,8 @@ class FigureLibrary:
 
     def lookup(self, uid: str) -> Figure | None:
         """Figur zur UID finden, unabhängig von der Schreibweise."""
-        return self._by_uid.get(normalize_uid(uid))
+        key = normalize_uid(uid)
+        return self._by_uid.get(key) if key else None
 
     def replace(self, figures: Iterable[Figure]) -> None:
         """Alle Figuren ersetzen."""

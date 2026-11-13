@@ -22,7 +22,7 @@ from custom_components.home_tonie.library import (
 )
 
 
-@pytest.mark.parametrize("raw", ["04-a1-b2-c3", "04:A1:B2:C3", "04 a1 b2 c3", " 04A1B2C3 "])
+@pytest.mark.parametrize("raw", ["04-a1-b2-c3", "04:A1:B2:C3", "04 a1 b2 c3", " 04A1B2C3 ", "04_a1.b2,c3"])
 def test_normalize_uid(raw):
     assert normalize_uid(raw) == "04A1B2C3"
 
@@ -33,6 +33,10 @@ def test_normalize_uid(raw):
     ("spotify:track:11dFghVXANMlKmJXsNCbNl", "spotify:track:11dFghVXANMlKmJXsNCbNl"),
     ("https://open.spotify.com/audiobook/7iHfbu1YPACw6oZPAFJtqe", "spotify:audiobook:7iHfbu1YPACw6oZPAFJtqe"),
     ("https://open.spotify.com/show/2MAi0BvDc6GTFvKFPXnkCL", "spotify:show:2MAi0BvDc6GTFvKFPXnkCL"),
+    ("https://open.spotify.com/album/4aawyAB9vmqN3uQ7FjRGTy/", "spotify:album:4aawyAB9vmqN3uQ7FjRGTy"),
+    ("https://open.spotify.com/album/4aawyAB9vmqN3uQ7FjRGTy/?si=x", "spotify:album:4aawyAB9vmqN3uQ7FjRGTy"),
+    ("HTTPS://Open.Spotify.com/Album/4aawyAB9vmqN3uQ7FjRGTy", "spotify:album:4aawyAB9vmqN3uQ7FjRGTy"),
+    ("Spotify:ALBUM:4aawyAB9vmqN3uQ7FjRGTy", "spotify:album:4aawyAB9vmqN3uQ7FjRGTy"),
 ])
 def test_normalize_spotify_uri(raw, expected):
     assert normalize_spotify_uri(raw) == expected
@@ -57,6 +61,12 @@ def test_lookup_matches_any_uid_spelling():
     lib = FigureLibrary([Figure("s1", "Bobo", "04A1B2C3", "spotify:album:4aawyAB9vmqN3uQ7FjRGTy", "restart")])
     assert lib.lookup("04-a1-b2-c3").name == "Bobo"
     assert lib.lookup("FFFF") is None
+
+
+@pytest.mark.parametrize("uid", ["", " ", "--", "xyz"])
+def test_lookup_empty_uid_returns_none(uid):
+    lib = FigureLibrary([Figure("s1", "Leer", "", "spotify:album:4aawyAB9vmqN3uQ7FjRGTy", "restart")])
+    assert lib.lookup(uid) is None
 
 
 def test_replace_swaps_figures():
