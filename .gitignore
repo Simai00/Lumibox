@@ -6,3 +6,6 @@ esphome/.esphome/
 # Python
 __pycache__/
 *.pyc
+
+# Superpowers SDD-Arbeitsverzeichnis
+.superpowers/
