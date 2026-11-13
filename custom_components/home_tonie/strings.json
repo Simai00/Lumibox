@@ -9,5 +9,123 @@
     "abort": {
       "single_instance_allowed": "[%key:common::config_flow::abort::single_instance_allowed%]"
     }
+  },
+  "config_subentries": {
+    "box": {
+      "entry_type": "Box",
+      "initiate_flow": {
+        "user": "Add box",
+        "reconfigure": "Edit box"
+      },
+      "step": {
+        "user": {
+          "title": "Add box",
+          "description": "Assign a Home Tonie box to a speaker and a Music Assistant user.",
+          "data": {
+            "name": "Name",
+            "esphome_device_id": "ESPHome device",
+            "player_entity_id": "Speaker",
+            "ma_username": "Music Assistant user",
+            "max_volume": "Maximum volume",
+            "volume_step": "Volume step"
+          },
+          "data_description": {
+            "name": "For example the child's name. Leave empty to use the device name.",
+            "esphome_device_id": "The Home Tonie box (ESPHome device). Each device can belong to only one box.",
+            "player_entity_id": "Music Assistant player the box plays on.",
+            "ma_username": "Music Assistant user of the child (for example anna). Their provider filter decides which Spotify account is used.",
+            "max_volume": "Upper limit for volume changes from the box, in percent.",
+            "volume_step": "Volume change per encoder detent, in percent."
+          }
+        },
+        "reconfigure": {
+          "title": "Edit box",
+          "description": "Assign a Home Tonie box to a speaker and a Music Assistant user.",
+          "data": {
+            "name": "Name",
+            "esphome_device_id": "ESPHome device",
+            "player_entity_id": "Speaker",
+            "ma_username": "Music Assistant user",
+            "max_volume": "Maximum volume",
+            "volume_step": "Volume step"
+          },
+          "data_description": {
+            "name": "For example the child's name. Leave empty to use the device name.",
+            "esphome_device_id": "The Home Tonie box (ESPHome device). Each device can belong to only one box.",
+            "player_entity_id": "Music Assistant player the box plays on.",
+            "ma_username": "Music Assistant user of the child (for example anna). Their provider filter decides which Spotify account is used.",
+            "max_volume": "Upper limit for volume changes from the box, in percent.",
+            "volume_step": "Volume change per encoder detent, in percent."
+          }
+        },
+        "confirm_shared_user": {
+          "title": "Shared Music Assistant user",
+          "description": "The user \"{username}\" is already used by: {boxes}. These boxes cannot play at the same time. Save anyway?"
+        }
+      },
+      "error": {
+        "device_in_use": "This ESPHome device is already assigned to another box."
+      },
+      "abort": {
+        "no_ma_players": "No Music Assistant player found. Set up Music Assistant first.",
+        "reconfigure_successful": "[%key:common::config_flow::abort::reconfigure_successful%]"
+      }
+    },
+    "figure": {
+      "entry_type": "Figure",
+      "initiate_flow": {
+        "user": "Add figure",
+        "reconfigure": "Edit figure"
+      },
+      "step": {
+        "user": {
+          "title": "Add figure",
+          "description": "Link an NFC figure to Spotify content.",
+          "data": {
+            "name": "Name",
+            "uid": "Tag UID",
+            "media_uri": "Spotify link",
+            "mode": "Mode"
+          },
+          "data_description": {
+            "name": "For example \"Bobo Siebenschläfer\".",
+            "uid": "UID of the NFC tag, e.g. 04A1B2C3. Separators are removed. Pre-filled with the last unknown tag.",
+            "media_uri": "Spotify link (open.spotify.com/...) or URI (spotify:album:...).",
+            "mode": "What happens when the figure is placed on the box."
+          }
+        },
+        "reconfigure": {
+          "title": "Edit figure",
+          "description": "Link an NFC figure to Spotify content.",
+          "data": {
+            "name": "Name",
+            "uid": "Tag UID",
+            "media_uri": "Spotify link",
+            "mode": "Mode"
+          },
+          "data_description": {
+            "name": "For example \"Bobo Siebenschläfer\".",
+            "uid": "UID of the NFC tag, e.g. 04A1B2C3. Separators are removed. Pre-filled with the last unknown tag.",
+            "media_uri": "Spotify link (open.spotify.com/...) or URI (spotify:album:...).",
+            "mode": "What happens when the figure is placed on the box."
+          }
+        }
+      },
+      "error": {
+        "invalid_uid": "The UID must contain hexadecimal characters (0-9, A-F).",
+        "uid_exists": "Another figure already uses this UID.",
+        "invalid_media_uri": "Not a valid Spotify link. Short links (spotify.link) are not supported: in the Spotify app use \"Share → Copy link\", or copy the address from open.spotify.com."
+      },
+      "abort": {
+        "reconfigure_successful": "[%key:common::config_flow::abort::reconfigure_successful%]"
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "restart": "Start from the beginning"
+      }
+    }
   }
 }

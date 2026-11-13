@@ -9,5 +9,123 @@
     "abort": {
       "single_instance_allowed": "Bereits konfiguriert. Nur eine einzige Konfiguration möglich."
     }
+  },
+  "config_subentries": {
+    "box": {
+      "entry_type": "Box",
+      "initiate_flow": {
+        "user": "Box hinzufügen",
+        "reconfigure": "Box bearbeiten"
+      },
+      "step": {
+        "user": {
+          "title": "Box hinzufügen",
+          "description": "Ordne eine Home-Tonie-Box einem Lautsprecher und einem Music-Assistant-Benutzer zu.",
+          "data": {
+            "name": "Name",
+            "esphome_device_id": "ESPHome-Gerät",
+            "player_entity_id": "Lautsprecher",
+            "ma_username": "Music-Assistant-Benutzer",
+            "max_volume": "Maximale Lautstärke",
+            "volume_step": "Lautstärke-Schritt"
+          },
+          "data_description": {
+            "name": "Zum Beispiel der Name des Kindes. Leer lassen, um den Gerätenamen zu verwenden.",
+            "esphome_device_id": "Die Home-Tonie-Box (ESPHome-Gerät). Jedes Gerät kann nur einer Box zugeordnet sein.",
+            "player_entity_id": "Music-Assistant-Player, auf dem die Box spielt.",
+            "ma_username": "Music-Assistant-Benutzer des Kindes (z. B. anna). Sein Anbieterfilter bestimmt, welcher Spotify-Account verwendet wird.",
+            "max_volume": "Obergrenze für Lautstärkeänderungen durch die Box, in Prozent.",
+            "volume_step": "Lautstärkeänderung pro Encoder-Raste, in Prozent."
+          }
+        },
+        "reconfigure": {
+          "title": "Box bearbeiten",
+          "description": "Ordne eine Home-Tonie-Box einem Lautsprecher und einem Music-Assistant-Benutzer zu.",
+          "data": {
+            "name": "Name",
+            "esphome_device_id": "ESPHome-Gerät",
+            "player_entity_id": "Lautsprecher",
+            "ma_username": "Music-Assistant-Benutzer",
+            "max_volume": "Maximale Lautstärke",
+            "volume_step": "Lautstärke-Schritt"
+          },
+          "data_description": {
+            "name": "Zum Beispiel der Name des Kindes. Leer lassen, um den Gerätenamen zu verwenden.",
+            "esphome_device_id": "Die Home-Tonie-Box (ESPHome-Gerät). Jedes Gerät kann nur einer Box zugeordnet sein.",
+            "player_entity_id": "Music-Assistant-Player, auf dem die Box spielt.",
+            "ma_username": "Music-Assistant-Benutzer des Kindes (z. B. anna). Sein Anbieterfilter bestimmt, welcher Spotify-Account verwendet wird.",
+            "max_volume": "Obergrenze für Lautstärkeänderungen durch die Box, in Prozent.",
+            "volume_step": "Lautstärkeänderung pro Encoder-Raste, in Prozent."
+          }
+        },
+        "confirm_shared_user": {
+          "title": "Gemeinsamer Music-Assistant-Benutzer",
+          "description": "Der Benutzer „{username}“ wird bereits verwendet von: {boxes}. Diese Boxen können nicht gleichzeitig spielen. Trotzdem speichern?"
+        }
+      },
+      "error": {
+        "device_in_use": "Dieses ESPHome-Gerät ist bereits einer anderen Box zugeordnet."
+      },
+      "abort": {
+        "no_ma_players": "Kein Music-Assistant-Player gefunden. Richte zuerst Music Assistant ein.",
+        "reconfigure_successful": "Die Neukonfiguration war erfolgreich."
+      }
+    },
+    "figure": {
+      "entry_type": "Figur",
+      "initiate_flow": {
+        "user": "Figur hinzufügen",
+        "reconfigure": "Figur bearbeiten"
+      },
+      "step": {
+        "user": {
+          "title": "Figur hinzufügen",
+          "description": "Verknüpfe eine NFC-Figur mit Spotify-Inhalten.",
+          "data": {
+            "name": "Name",
+            "uid": "Tag-UID",
+            "media_uri": "Spotify-Link",
+            "mode": "Modus"
+          },
+          "data_description": {
+            "name": "Zum Beispiel „Bobo Siebenschläfer“.",
+            "uid": "UID des NFC-Tags, z. B. 04A1B2C3. Trennzeichen werden entfernt. Vorbelegt mit dem zuletzt erkannten unbekannten Tag.",
+            "media_uri": "Spotify-Link (open.spotify.com/…) oder URI (spotify:album:…).",
+            "mode": "Was passiert, wenn die Figur aufgelegt wird."
+          }
+        },
+        "reconfigure": {
+          "title": "Figur bearbeiten",
+          "description": "Verknüpfe eine NFC-Figur mit Spotify-Inhalten.",
+          "data": {
+            "name": "Name",
+            "uid": "Tag-UID",
+            "media_uri": "Spotify-Link",
+            "mode": "Modus"
+          },
+          "data_description": {
+            "name": "Zum Beispiel „Bobo Siebenschläfer“.",
+            "uid": "UID des NFC-Tags, z. B. 04A1B2C3. Trennzeichen werden entfernt. Vorbelegt mit dem zuletzt erkannten unbekannten Tag.",
+            "media_uri": "Spotify-Link (open.spotify.com/…) oder URI (spotify:album:…).",
+            "mode": "Was passiert, wenn die Figur aufgelegt wird."
+          }
+        }
+      },
+      "error": {
+        "invalid_uid": "Die UID muss Hexadezimalzeichen (0–9, A–F) enthalten.",
+        "uid_exists": "Diese UID wird bereits von einer anderen Figur verwendet.",
+        "invalid_media_uri": "Kein gültiger Spotify-Link. Kurzlinks (spotify.link) werden nicht unterstützt: In der Spotify-App „Link teilen → Link kopieren“ verwenden oder die Adresse von open.spotify.com kopieren."
+      },
+      "abort": {
+        "reconfigure_successful": "Die Neukonfiguration war erfolgreich."
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "restart": "Von vorne starten"
+      }
+    }
   }
 }
