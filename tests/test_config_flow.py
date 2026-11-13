@@ -2,8 +2,13 @@
 
 from types import SimpleNamespace
 
+from homeassistant.components import persistent_notification
+from homeassistant.components.persistent_notification import (
+    _async_get_or_create_notifications,
+)
 from homeassistant.config_entries import SOURCE_RECONFIGURE, SOURCE_USER
 from homeassistant.data_entry_flow import FlowResultType
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.home_tonie.const import (
     CONF_ESPHOME_DEVICE_ID,
@@ -14,6 +19,7 @@ from custom_components.home_tonie.const import (
     CONF_PLAYER_ENTITY_ID,
     CONF_UID,
     CONF_VOLUME_STEP,
+    DOMAIN,
     SUBENTRY_BOX,
     SUBENTRY_FIGURE,
 )
@@ -292,3 +298,105 @@ async def test_figure_uid_prefilled(hass, loaded_entry):
 async def test_figure_without_runtime_data_has_no_prefill(hass, loaded_entry):
     result = await _start(hass, loaded_entry, SUBENTRY_FIGURE)
     assert _suggested(result, CONF_UID) is None
+
+
+# --- Nachträge aus dem Abschluss-Review --------------------------------------
+
+
+async def test_box_empty_username(hass, loaded_entry, esphome_device, ma_player):
+    result = await _start(hass, loaded_entry, SUBENTRY_BOX)
+    result = await _configure(
+        hass,
+        result,
+        {
+            CONF_ESPHOME_DEVICE_ID: esphome_device.id,
+            CONF_PLAYER_ENTITY_ID: ma_player.entity_id,
+            CONF_MA_USERNAME: "   ",
+            CONF_MAX_VOLUME: 40,
+            CONF_VOLUME_STEP: 3,
+        },
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {CONF_MA_USERNAME: "invalid_username"}
+    assert not _subentries(loaded_entry, SUBENTRY_BOX)
+
+
+async def test_reconfigure_box_empty_username(
+    hass, loaded_entry_with_box, esphome_device, ma_player
+):
+    (box,) = _subentries(loaded_entry_with_box, SUBENTRY_BOX)
+    result = await _start(
+        hass, loaded_entry_with_box, SUBENTRY_BOX, SOURCE_RECONFIGURE, box.subentry_id
+    )
+    result = await _configure(
+        hass,
+        result,
+        {
+            "name": "Anna",
+            CONF_ESPHOME_DEVICE_ID: esphome_device.id,
+            CONF_PLAYER_ENTITY_ID: ma_player.entity_id,
+            CONF_MA_USERNAME: " ",
+            CONF_MAX_VOLUME: 40,
+            CONF_VOLUME_STEP: 3,
+        },
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {CONF_MA_USERNAME: "invalid_username"}
+    assert loaded_entry_with_box.subentries[box.subentry_id].data[CONF_MA_USERNAME] == "anna"
+
+
+async def test_figure_known_uid_not_prefilled(hass, loaded_entry_with_figure):
+    loaded_entry_with_figure.runtime_data.last_unknown_uid = "04A1B2C3"
+    result = await _start(hass, loaded_entry_with_figure, SUBENTRY_FIGURE)
+    assert _suggested(result, CONF_UID) is None
+
+
+async def test_figure_created_clears_unknown_uid_and_notifications(
+    hass, loaded_entry_with_box
+):
+    (box,) = _subentries(loaded_entry_with_box, SUBENTRY_BOX)
+    notification_id = f"home_tonie_unknown_{box.subentry_id}"
+    persistent_notification.async_create(hass, "Neue Figur", notification_id=notification_id)
+    loaded_entry_with_box.runtime_data.last_unknown_uid = "FFEE"
+
+    result = await _start(hass, loaded_entry_with_box, SUBENTRY_FIGURE)
+    assert _suggested(result, CONF_UID) == "FFEE"
+    result = await _configure(
+        hass,
+        result,
+        {"name": "Neu", CONF_UID: "ff:ee", CONF_MEDIA_URI: URI, CONF_MODE: "restart"},
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert loaded_entry_with_box.runtime_data.last_unknown_uid is None
+    assert notification_id not in _async_get_or_create_notifications(hass)
+
+
+async def test_figure_with_other_uid_keeps_unknown_uid(hass, loaded_entry_with_box):
+    (box,) = _subentries(loaded_entry_with_box, SUBENTRY_BOX)
+    notification_id = f"home_tonie_unknown_{box.subentry_id}"
+    persistent_notification.async_create(hass, "Neue Figur", notification_id=notification_id)
+    loaded_entry_with_box.runtime_data.last_unknown_uid = "FFEE"
+
+    result = await _start(hass, loaded_entry_with_box, SUBENTRY_FIGURE)
+    result = await _configure(
+        hass,
+        result,
+        {"name": "Neu", CONF_UID: "AABB", CONF_MEDIA_URI: URI, CONF_MODE: "restart"},
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert loaded_entry_with_box.runtime_data.last_unknown_uid == "FFEE"
+    assert notification_id in _async_get_or_create_notifications(hass)
+
+
+async def test_figure_created_without_runtime_data(hass):
+    entry = MockConfigEntry(domain=DOMAIN, title="Home Tonie", data={})
+    entry.add_to_hass(hass)
+    result = await _start(hass, entry, SUBENTRY_FIGURE)
+    assert _suggested(result, CONF_UID) is None
+    result = await _configure(
+        hass,
+        result,
+        {"name": "Neu", CONF_UID: "FFEE", CONF_MEDIA_URI: URI, CONF_MODE: "restart"},
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert len(_subentries(entry, SUBENTRY_FIGURE)) == 1

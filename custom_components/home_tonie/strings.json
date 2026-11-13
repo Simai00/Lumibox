@@ -64,7 +64,8 @@
         }
       },
       "error": {
-        "device_in_use": "This ESPHome device is already assigned to another box."
+        "device_in_use": "This ESPHome device is already assigned to another box.",
+        "invalid_username": "Please enter a Music Assistant user name."
       },
       "abort": {
         "no_ma_players": "No Music Assistant player found. Set up Music Assistant first.",

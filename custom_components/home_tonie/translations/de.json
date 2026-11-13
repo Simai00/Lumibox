@@ -64,7 +64,8 @@
         }
       },
       "error": {
-        "device_in_use": "Dieses ESPHome-Gerät ist bereits einer anderen Box zugeordnet."
+        "device_in_use": "Dieses ESPHome-Gerät ist bereits einer anderen Box zugeordnet.",
+        "invalid_username": "Bitte einen Music-Assistant-Benutzernamen angeben."
       },
       "abort": {
         "no_ma_players": "Kein Music-Assistant-Player gefunden. Richte zuerst Music Assistant ein.",

@@ -87,7 +87,7 @@ Pro Box gibt es eine eigene Datei in `esphome/` (`home-tonie-anna.yaml`, `home-t
 2. **Box hinzufügen:** Name, ESPHome-Gerät der Box, Ziel-Lautsprecher, Music-Assistant-Benutzer des Kindes, maximale Lautstärke und Schrittweite pro Encoder-Raste festlegen.
 3. **Figur hinzufügen:** Name, UID des Tags und Spotify-Link (Album, Playlist, Titel, Künstler, Podcast, Folge oder Hörbuch; `https://open.spotify.com/...` oder `spotify:...`).
 
-**Figuren anlernen:** Eine unbekannte Figur auf eine Box legen. Die Box blinkt rot und Home Assistant zeigt eine Benachrichtigung mit der UID. Dann bei "Home Tonie" "Figur hinzufügen" wählen: Die UID ist bereits eingetragen, es fehlen nur Name und Spotify-Link.
+**Figuren anlernen:** Eine unbekannte Figur auf eine Box legen. Die Box blinkt rot und Home Assistant zeigt eine Benachrichtigung mit der UID. Dann bei "Home Tonie" "Figur hinzufügen" wählen: Die UID ist bereits eingetragen, es fehlen nur Name und Spotify-Link. Nach dem Speichern die Figur einmal abheben und wieder auflegen, damit sie zu spielen beginnt.
 
 ## Manuelle Testcheckliste
 

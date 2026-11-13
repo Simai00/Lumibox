@@ -6,6 +6,7 @@ from typing import Any
 
 import voluptuous as vol
 
+from homeassistant.components import persistent_notification
 from homeassistant.config_entries import (
     SOURCE_RECONFIGURE,
     ConfigEntry,
@@ -165,7 +166,9 @@ class BoxSubentryFlow(_HomeTonieSubentryFlow):
         if user_input is not None:
             data = self._build_data(user_input)
             others = self._other_subentries(SUBENTRY_BOX)
-            if any(
+            if not data[CONF_MA_USERNAME]:
+                errors[CONF_MA_USERNAME] = "invalid_username"
+            elif any(
                 sub.data.get(CONF_ESPHOME_DEVICE_ID) == data[CONF_ESPHOME_DEVICE_ID]
                 for sub in others
             ):
@@ -257,6 +260,7 @@ class FigureSubentryFlow(_HomeTonieSubentryFlow):
             except InvalidMediaUri:
                 errors[CONF_MEDIA_URI] = "invalid_media_uri"
             if not errors:
+                self._forget_unknown_uid(uid)
                 return self._finish(
                     name,
                     {
@@ -274,12 +278,29 @@ class FigureSubentryFlow(_HomeTonieSubentryFlow):
         else:
             runtime = getattr(self._get_entry(), "runtime_data", None)
             last_uid = getattr(runtime, "last_unknown_uid", None)
+            library = getattr(runtime, "library", None)
+            if last_uid and library is not None and library.lookup(last_uid) is not None:
+                last_uid = None  # inzwischen als Figur angelegt
             suggested = {CONF_UID: last_uid} if last_uid else {}
         return self.async_show_form(
             step_id=step_id,
             data_schema=self.add_suggested_values_to_schema(FIGURE_SCHEMA, suggested),
             errors=errors,
         )
+
+    def _forget_unknown_uid(self, uid: str) -> None:
+        """Wird das zuletzt unbekannte Tag angelegt: Vorbelegung und Hinweise entfernen."""
+        entry = self._get_entry()
+        runtime = getattr(entry, "runtime_data", None)
+        last_uid = getattr(runtime, "last_unknown_uid", None)
+        if not last_uid or normalize_uid(str(last_uid)) != uid:
+            return
+        runtime.last_unknown_uid = None
+        for sub in entry.subentries.values():
+            if sub.subentry_type == SUBENTRY_BOX:
+                persistent_notification.async_dismiss(
+                    self.hass, f"home_tonie_unknown_{sub.subentry_id}"
+                )
 
 
 def _has_ma_players(hass: HomeAssistant) -> bool:
