@@ -34,6 +34,7 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 STATE_PAUSED = "paused"
+STATE_PLAYING = "playing"
 
 
 class Player(Protocol):
@@ -221,7 +222,12 @@ class BoxController:
             BoxState.PLAYING,
             BoxState.PAUSED_BY_BOX,
         ):
-            _LOGGER.debug("Doppeltes tag_on für %s ignoriert", figure.name)
+            # Player unverändert lassen, aber die LED nachziehen (z. B. nach Box-Neustart).
+            _LOGGER.debug("Doppeltes tag_on für %s, LED aktualisiert", figure.name)
+            if self._state is BoxState.PLAYING:
+                await self._led.show(LED_PLAYING)
+            elif self._state is BoxState.PAUSED_BY_BOX:
+                await self._led.show(LED_HOLD)
             return
 
         await self._start(figure)
@@ -349,6 +355,12 @@ class BoxController:
     async def _finish_removal(self, uid: str | None) -> None:
         """Abnehmen abschliessen; Aufrufer hält den Lock."""
         figure = self._current_figure
+        if figure is None and uid is not None:
+            # Z. B. nach einem HA-Neustart: Der Controller kennt keine Figur, Music
+            # Assistant spielt aber noch. Eine bekannte Figur wird dann trotzdem angehalten.
+            known = self._library.lookup(uid)
+            if known is not None and self._player.snapshot().state == STATE_PLAYING:
+                figure = known
         if figure is None or uid is None or normalize_uid(figure.uid) != uid:
             await self._led.show(LED_OFF)
             return
@@ -373,6 +385,10 @@ class BoxController:
         self._set(BoxState.REMOVED, None)
 
     async def _handle_unknown(self, uid: str) -> None:
+        figure = self._current_figure
+        if figure is not None:
+            # Die bisherige Figur ist noch aktiv (Abnahme lag im Lock-Fenster): anhalten.
+            await self._pause_current(figure)
         self._last_unknown_uid = uid
         persistent_notification.async_create(
             self._hass,
@@ -389,6 +405,23 @@ class BoxController:
                 self._on_unknown_tag(uid)
             except Exception:  # noqa: BLE001
                 _LOGGER.exception("Fehler in on_unknown_tag der Box %s", self._config.name)
+
+    async def _pause_current(self, figure: Figure) -> None:
+        """Aktive Figur anhalten und für ein späteres Fortsetzen merken; Aufrufer hält den Lock."""
+        self._last_figure = figure
+        self._snapshot_at_removal = None
+        if self._state is BoxState.PAUSED_BY_BOX:
+            self._snapshot_at_removal = self._player.snapshot().media_content_id
+            return
+        try:
+            snapshot = self._player.snapshot()
+            await self._player.pause()
+        except PlayerError as err:
+            _LOGGER.warning(
+                "Box %s: Pause von %s fehlgeschlagen: %s", self._config.name, figure.name, err
+            )
+            return
+        self._snapshot_at_removal = snapshot.media_content_id
 
     async def _start(self, figure: Figure) -> None:
         """Figur abspielen: weiterspielen oder neu starten (Spec 6.2 Schritte 3–6)."""
@@ -414,6 +447,15 @@ class BoxController:
                 self._config.name,
                 figure.name,
                 err,
+            )
+            await self._led.show(LED_ERROR)
+            self._set(BoxState.IDLE, None)
+            return
+        except Exception:  # noqa: BLE001 - z. B. vol.Invalid nach geändertem MA-Schema
+            _LOGGER.exception(
+                "Box %s: Unerwarteter Fehler beim Abspielen von %s",
+                self._config.name,
+                figure.name,
             )
             await self._led.show(LED_ERROR)
             self._set(BoxState.IDLE, None)

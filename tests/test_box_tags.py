@@ -326,3 +326,99 @@ async def test_shutdown_cancels_running_removal(hass, box):
     gate.set()
     await hass.async_block_till_done()
     assert box.ctrl.state is BoxState.PLAYING  # Abnahme wurde abgebrochen
+
+
+async def test_removal_after_restart_pauses_known_figure(hass, box):
+    """Nach HA-Neustart: Controller IDLE, MA spielt noch; Abnehmen einer bekannten Figur pausiert."""
+    box.player.state = "playing"
+    box.player.media_content_id = BOBO_URI
+    assert box.ctrl.state is BoxState.IDLE
+    await box.ctrl.tag_off("04A1B2C3")
+    await _advance(hass, 1.1)
+    assert box.player.calls == [("pause",)]
+    assert box.led.shows == [("paused", 0)]
+    assert box.ctrl.state is BoxState.REMOVED
+    # Wieder auflegen setzt fort statt neu zu starten.
+    box.player.calls.clear()
+    box.player.volume = 0.3
+    await box.ctrl.tag_on("04A1B2C3")
+    assert box.player.calls == [("resume",)]
+    assert box.ctrl.state is BoxState.PLAYING
+
+
+async def test_removal_after_restart_player_not_playing_only_led_off(hass, box):
+    box.player.state = "paused"
+    await box.ctrl.tag_off("04A1B2C3")
+    await _advance(hass, 1.1)
+    assert ("pause",) not in box.player.calls
+    assert box.led.shows == [("off", 0)]
+    assert box.ctrl.state is BoxState.IDLE
+
+
+async def test_duplicate_tag_on_resends_playing_led(hass, box):
+    await box.ctrl.tag_on("04A1B2C3")
+    calls = list(box.player.calls)
+    box.led.shows.clear()
+    await box.ctrl.tag_on("04A1B2C3")
+    assert box.player.calls == calls
+    assert box.led.shows == [("playing", 0)]
+    assert box.ctrl.state is BoxState.PLAYING
+
+
+async def test_duplicate_tag_on_resends_hold_led(hass, box):
+    await box.ctrl.tag_on("04A1B2C3")
+    await box.ctrl.play_pause()
+    assert box.ctrl.state is BoxState.PAUSED_BY_BOX
+    calls = list(box.player.calls)
+    box.led.shows.clear()
+    await box.ctrl.tag_on("04A1B2C3")
+    assert box.player.calls == calls
+    assert box.led.shows == [("hold", 0)]
+    assert box.ctrl.state is BoxState.PAUSED_BY_BOX
+
+
+async def test_unknown_tag_while_figure_playing_pauses_it(hass, box):
+    """Lock-Fenster: Die bekannte Figur spielt noch, als ein unbekanntes Tag kommt."""
+    await box.ctrl.tag_on("04A1B2C3")
+    box.led.shows.clear()
+    await box.ctrl.tag_on("FFEE")
+    assert box.player.calls[-1] == ("pause",)
+    assert box.led.shows == [("unknown", 0)]
+    assert box.ctrl.state is BoxState.IDLE
+    assert box.ctrl.current_figure is None
+    assert box.unknown_uids == ["FFEE"]
+
+
+async def test_unknown_tag_pause_error_does_not_raise(hass, box):
+    await box.ctrl.tag_on("04A1B2C3")
+    box.player.available = False
+    await box.ctrl.tag_on("FFEE")
+    assert box.led.shows[-1] == ("unknown", 0)
+    assert box.ctrl.state is BoxState.IDLE
+    assert box.unknown_uids == ["FFEE"]
+
+
+async def test_unexpected_error_on_play_does_not_stick_in_loading(hass, box, caplog):
+    async def broken_play(media_uri: str) -> None:
+        raise ValueError("Schema geändert")
+
+    box.player.play = broken_play
+    await box.ctrl.tag_on("04A1B2C3")
+    assert box.led.shows[-1] == ("error", 0)
+    assert box.ctrl.state is BoxState.IDLE
+    assert box.ctrl.current_figure is None
+    assert "Schema geändert" in caplog.text
+
+
+async def test_unexpected_error_on_resume_does_not_raise(hass, box):
+    await box.ctrl.tag_on("04A1B2C3")
+    await box.ctrl.tag_off("04A1B2C3")
+    await _advance(hass, 1.1)
+
+    async def broken_resume() -> None:
+        raise ValueError("Schema geändert")
+
+    box.player.resume = broken_resume
+    await box.ctrl.tag_on("04A1B2C3")
+    assert box.led.shows[-1] == ("error", 0)
+    assert box.ctrl.state is BoxState.IDLE
