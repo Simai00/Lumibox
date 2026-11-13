@@ -302,12 +302,32 @@ Mindestversion HA: die erste Version mit Config-Subentries inkl. Reconfigure. Di
 
 ## 10. Offene Punkte / bei Umsetzung zu verifizieren
 
-- **Als erstes zu prüfen (Spike, sobald der zweite Spotify-Account da ist):**
-  - Zwei Music-Assistant-Benutzer mit je eigenem Spotify-Anbieterfilter spielen per `play_media … username:` **gleichzeitig** verschiedene Inhalte auf zwei Lautsprechern, auch über Titelwechsel hinweg.
-  - Gegenprobe ohne `username`: Hier wird ein Abbruch erwartet.
-  - **Fallback**, falls die Anbieterfilter die Account-Wahl nicht steuern: Die Box bekommt die Provider-Instanz-ID, und die `media_id` wird instanzspezifisch gebildet.
-- Prüfen, ob `homeassistant.event` von ESPHome die `device_id` mitliefert und ob dafür „HA-Actions erlauben“ nötig ist.
-  - **Fallback**, falls `device_id` fehlt: Die Box sendet `${device_name}` als Feld `box` mit, die Integration ordnet über den Gerätenamen zu.
-- Prüfen, ob `media_content_id` bei Music-Assistant-Playern beim Pausieren stabil bleibt (wichtig für die Weiterspielen-Regel).
-  - **Fallback:** Die Regel nur auf `F == last_figure` und Player `paused` stützen.
-- Verhalten von HomePod mini über AirPlay bei `enqueue = replace` und Titelsprung testen.
+Stand der Recherche: 2026-11-13, gegen HA-Core `dev` (2026.12) und die Music-Assistant-Quellen (`music-assistant/server`, `music-assistant/models`). Alle Punkte ausser dem manuellen Test sind aus Primärquellen **belegt**, sofern nicht „vermutet“ steht. Details: `.superpowers/sdd/2026-11-13-home-tonie-integration/task-0-report.md`.
+
+1. **ESPHome-Event enthält `device_id`** – ✅ verifiziert.
+   - `async_on_service_call` in `esphome/manager.py` feuert bei `service.is_event` per `hass.bus.async_fire("esphome.<name>", {ATTR_DEVICE_ID: device_id, **service_data})`. `device_id` ist `entry_data.main_device_entry_id` (Geräte-Registry-ID der Box; Typ `str | None`).
+   - „HA-Actions erlauben“ (`allow_service_calls`) ist für Events **nicht** nötig: Die Option gated nur den `elif`-Zweig für echte Service-Aufrufe (nicht `is_event`). Die Option ist für `esphome.<node>_set_led` (HA → Gerät) nicht relevant, weil das ein von HA registrierter Dienst ist. In Abschnitt 9 Punkt 3 kann „HA-Actions erlauben“ entfallen. Es schadet aber nicht.
+   - Einschränkung: Event-Name muss `esphome.*` lauten. Daten aus dem Gerät kommen als Strings/Zahlen in `event.data`.
+   - Quelle: https://github.com/home-assistant/core/blob/dev/homeassistant/components/esphome/manager.py (Zeilen ~327–375)
+   - Der `box`-Fallback ist nicht nötig, wird aber als Reserve behalten (`main_device_entry_id` kann `None` sein; dann Event ignorieren und loggen).
+2. **ESPHome-Knotenname** – ✅ verifiziert. Der ESPHome-Config-Entry hat `entry.data["device_name"]` (`CONF_DEVICE_NAME = "device_name"`, Bindestriche wie in der YAML). Der Dienstname lautet `esphome.<device_name mit "-" → "_">_<service>`, also `esphome.home_tonie_anna_set_led` für `home-tonie-anna` (`manager.py`, Funktion zur Dienstnamen-Bildung: `device_info.name.replace('-', '_')`). Weg: `device_registry.async_get(device_id)` → `config_entries` → Entry mit `domain == "esphome"` → `entry.data["device_name"]`. Quellen: `esphome/const.py`, `esphome/manager.py` (dev).
+3. **Music Assistant `media_type`/URI** – ✅ verifiziert, mit **Korrektur**.
+   - Schema von `music_assistant.play_media`: `media_id` (Liste), `media_type` optional (`Coerce(MediaType)`), `enqueue` (`play|replace|next|replace_next|add`), `radio_mode`, `shuffle`, `start_item`, `username`. Quelle: `homeassistant/components/music_assistant/services.py` (dev).
+   - `MediaType`-Werte (music_assistant_models): `artist, album, track, playlist, radio, audiobook, podcast, podcast_episode, folder, …`. Unbekannte Strings werden still zu `unknown`, es gibt keinen Fehler. Die UI-Auswahl in `services.yaml` listet `podcast_episode` nicht, der Wert ist aber gültig.
+   - **Die URI trägt den Typ**: MA-Form `<provider>://<media_type>/<item_id>`, z. B. `spotify://album/<id>`, `spotify://podcast/<id>`, `spotify://podcast_episode/<id>`, `spotify://audiobook/<id>`. Mit vollständiger URI wird `media_type` nicht gebraucht (nur für numerische Bibliotheks-IDs/Namenssuche). Spotify-IDs müssen 22 Zeichen Base62 sein. Quelle: `music_assistant/helpers/uri.py` (`parse_uri`, `valid_id`).
+   - **Achtung:** Native Spotify-URIs/Links mit `show`/`episode` (`spotify:show:<id>`, `open.spotify.com/show/<id>`) werden **nicht** korrekt aufgelöst (`MediaType("show")` → `unknown`). Die Integration muss `show→podcast`, `episode→podcast_episode` in die URI schreiben.
+   - Mapping bestätigt: `album→album`, `playlist→playlist`, `track→track`, `artist→artist`, `audiobook→audiobook`, `show→podcast`, `episode→podcast_episode`.
+   - **Konsequenz Task 2:** URI als `spotify://<mapped_type>/<id>` bauen; `media_type` zusätzlich mitgeben ist harmlos, aber optional. Für den Provider-Instanz-Fallback ist `<instance_id>://<type>/<id>` zulässig. Hörbücher funktionieren nur, wenn der Account/die Region sie unterstützt (`audiobooks_supported` im Spotify-Provider).
+4. **Config-Subentries** – ✅ verifiziert (HA-Core dev, `config_entries.py`).
+   - Namen unverändert gültig: `ConfigFlow.async_get_supported_subentry_types(config_entry) -> dict[str, type[ConfigSubentryFlow]]`, `ConfigSubentryFlow` mit `async_step_reconfigure`, `self._get_reconfigure_subentry()`, `self._get_entry()`, `self.async_update_and_abort(entry, subentry, data=… | data_updates=…, title=…, unique_id=…, reason=…)`, `self.async_create_entry(title, data, unique_id=…)`. `async_add_entities(entities, config_subentry_id=…)` existiert (`helpers/entity_platform.py`).
+   - **Erste Version mit Subentry-Reconfigure: 2025.3.** (`2025.2.0` hat noch kein `ConfigSubentryFlow`.) In 2025.3 hiess die Methode auf dem Subentry-Flow noch `_get_reconfigure_entry()`; sie wurde in **2025.4** (PR #141017, 2025-03-24) zu `_get_entry()` umbenannt. Der Name `_get_entry()` ist deshalb erst ab 2025.4 vorhanden.
+   - **Mindestversion HA: 2025.4.0** (Task 10: `hacs.json` `"homeassistant": "2025.4.0"`, ggf. in `manifest.json`-Hinweis). Der Code verwendet `_get_entry()`.
+   - Doku-Hinweis: Die Entwicklerdoku (contributors.home-assistant.io/core/integrations/config-flow/) beschreibt Subentry-Reconfigure nicht ausführlich; die Quelle ist der Core-Code.
+   - Test-Tooling: `pytest-homeassistant-custom-component` 0.13.375 (2026-10-25, PyPI), pinnt `homeassistant==2026.10.4`, `requires_python >=3.14`. Die Test-Umgebung (Task 1/CI) braucht deshalb Python 3.14. Tests laufen gegen 2026.10.4, nicht gegen die Mindestversion.
+5. **Spotify-Anbieterfilter/`username`-Spike** – offen – manueller Test durch Nutzer.
+   - Zwei Music-Assistant-Benutzer mit je eigenem Spotify-Anbieterfilter spielen per `play_media … username:` **gleichzeitig** verschiedene Inhalte auf zwei Lautsprechern, auch über Titelwechsel hinweg.
+   - Gegenprobe ohne `username`: Hier wird ein Abbruch erwartet.
+   - Beleg aus dem Code (nicht der Test): `username` wirkt als Impersonation des MA-Benutzers (`user`), ohne `username` wird der HA-Benutzer des Aufrufs genommen (`media_player.py`, `_async_handle_play_media`); ein unbekannter Name führt zu einem Fehler.
+   - **Fallback**, falls die Anbieterfilter die Account-Wahl nicht steuern: Die Box bekommt die Provider-Instanz-ID, und die `media_id` wird instanzspezifisch gebildet (`<instance_id>://<type>/<id>`).
+6. **`media_content_id` beim Pausieren stabil** – offen – manueller Test durch Nutzer (Teil des Tests aus Punkt 5). **Fallback:** Die Regel nur auf `F == last_figure` und Player `paused` stützen.
+7. **HomePod mini über AirPlay bei `enqueue = replace` und Titelsprung** – offen – manueller Test durch Nutzer.
