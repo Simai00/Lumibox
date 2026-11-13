@@ -5,9 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 import pytest
-from homeassistant.config_entries import ConfigSubentryData
+from homeassistant.config_entries import ConfigEntryState, ConfigSubentry, ConfigSubentryData
+from homeassistant.core import ServiceCall
 from homeassistant.helpers import device_registry as dr, entity_registry as er
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
 
 from custom_components.home_tonie.box import BoxConfig, BoxController
 from custom_components.home_tonie.const import (
@@ -161,3 +162,97 @@ async def loaded_entry_with_figure(hass) -> MockConfigEntry:
             )
         ],
     )
+
+
+def _box_subentry(name: str, device_id: str, player: str, username: str) -> ConfigSubentryData:
+    return ConfigSubentryData(
+        subentry_type=SUBENTRY_BOX,
+        title=name,
+        unique_id=None,
+        data={
+            "name": name,
+            CONF_ESPHOME_DEVICE_ID: device_id,
+            CONF_PLAYER_ENTITY_ID: player,
+            CONF_MA_USERNAME: username,
+            CONF_MAX_VOLUME: 40,
+            CONF_VOLUME_STEP: 3,
+        },
+    )
+
+
+def _figure_subentry(figure: Figure) -> ConfigSubentryData:
+    return ConfigSubentryData(
+        subentry_type=SUBENTRY_FIGURE,
+        title=figure.name,
+        unique_id=None,
+        data={
+            "name": figure.name,
+            CONF_UID: figure.uid,
+            CONF_MEDIA_URI: figure.media_uri,
+            CONF_MODE: MODE_RESTART,
+        },
+    )
+
+
+@dataclass
+class TwoBoxes:
+    """Geladener Haupteintrag mit den Boxen Anna und Ben und gemockten Services."""
+
+    entry: MockConfigEntry
+    dev_anna: str
+    dev_ben: str
+    play: list[ServiceCall]
+    media_player: dict[str, list[ServiceCall]]
+    led: dict[str, list[ServiceCall]]
+
+    def box_subentry(self, name: str) -> ConfigSubentry:
+        """Box-Subentry anhand des Namens."""
+        return next(
+            sub
+            for sub in self.entry.subentries.values()
+            if sub.subentry_type == SUBENTRY_BOX and sub.data["name"] == name
+        )
+
+    def all_calls(self) -> list[ServiceCall]:
+        """Alle aufgezeichneten Service-Aufrufe (Player und LED)."""
+        calls = list(self.play)
+        for lst in (*self.media_player.values(), *self.led.values()):
+            calls.extend(lst)
+        return calls
+
+
+MEDIA_PLAYER_SERVICES = (
+    "media_play",
+    "media_pause",
+    "media_next_track",
+    "media_previous_track",
+    "volume_set",
+)
+
+
+@pytest.fixture
+async def two_boxes_entry(hass):
+    """Boxen Anna (media_player.anna, anna) und Ben (media_player.ben, ben), Figuren Bobo und Feuerwehr."""
+    anna = _esphome_device(hass, "aa:bb:cc:dd:ee:11", "home-tonie-anna", "Home Tonie Anna")
+    ben = _esphome_device(hass, "aa:bb:cc:dd:ee:12", "home-tonie-ben", "Home Tonie Ben")
+    hass.states.async_set("media_player.anna", "idle", {"volume_level": 0.3})
+    hass.states.async_set("media_player.ben", "idle", {"volume_level": 0.3})
+    play = async_mock_service(hass, "music_assistant", "play_media")
+    media_player = {svc: async_mock_service(hass, "media_player", svc) for svc in MEDIA_PLAYER_SERVICES}
+    led = {
+        "anna": async_mock_service(hass, "esphome", "home_tonie_anna_set_led"),
+        "ben": async_mock_service(hass, "esphome", "home_tonie_ben_set_led"),
+    }
+    entry = await _load_entry(
+        hass,
+        [
+            _box_subentry("Anna", anna.id, "media_player.anna", "anna"),
+            _box_subentry("Ben", ben.id, "media_player.ben", "ben"),
+            _figure_subentry(BOBO),
+            _figure_subentry(FEUERWEHR),
+        ],
+    )
+    yield TwoBoxes(entry, anna.id, ben.id, play, media_player, led)
+    if entry.state is ConfigEntryState.LOADED:
+        assert await hass.config_entries.async_unload(entry.entry_id)
+        await hass.async_block_till_done()

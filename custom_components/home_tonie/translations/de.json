@@ -127,5 +127,15 @@
         "restart": "Von vorne starten"
       }
     }
+  },
+  "entity": {
+    "sensor": {
+      "current_figure": {
+        "name": "Aktuelle Figur"
+      },
+      "last_unknown_tag": {
+        "name": "Letzter unbekannter Tag"
+      }
+    }
   }
 }
