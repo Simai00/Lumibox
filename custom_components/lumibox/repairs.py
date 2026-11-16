@@ -42,14 +42,16 @@ class FirmwareUpdateFlow(RepairsFlow):
         """Eigene Update-Entität der Box mit verfügbarem Update (bevorzugt `on`).
 
         Die ESPHome-Dashboard-Entität hat die reine MAC als unique_id (ohne "-") und
-        gehört nicht zur Firmware der Box; sie wird übersprungen.
+        gehört nicht zur Firmware der Box; sie wird übersprungen. Native unique_ids sind
+        v1/v2 "{mac}-{typ}-{name}" oder v3 "{mac}/{geraet}/{typ}/{name}", enthalten also
+        "-" oder "/" (die MAC allein hat beides nicht).
         """
         candidates = [
             entry.entity_id
             for entry in er.async_entries_for_device(er.async_get(self.hass), self._device_id)
             if entry.domain == "update"
             and entry.platform == "esphome"
-            and "-" in entry.unique_id
+            and ("-" in entry.unique_id or "/" in entry.unique_id)
         ]
         for entity_id in candidates:
             state = self.hass.states.get(entity_id)

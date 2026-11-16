@@ -235,3 +235,13 @@ async def test_issue_removed_when_device_removed(hass):
     dr.async_get(hass).async_remove_device(device.id)
     await hass.async_block_till_done()
     assert _issue(hass, sub.subentry_id) is None
+
+
+async def test_fix_flow_accepts_v3_unique_id(hass, esphome_device):
+    _update_entity(hass, esphome_device, "off", DASHBOARD_UID)
+    native = _update_entity(hass, esphome_device, "on", "aa:bb:cc:dd:ee:01/0/update/firmware")
+    calls = async_mock_service(hass, "update", "install")
+    flow = await _start_flow(hass, esphome_device)
+    result = await flow.async_step_confirm({})
+    assert result["reason"] == "update_started"
+    assert calls[0].data["entity_id"] == native.entity_id
