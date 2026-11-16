@@ -83,7 +83,9 @@ class FakeLed:
     """Spiegelt LedAdapter und zeichnet angezeigte Modi auf."""
 
     def __init__(self) -> None:
-        self.shows: list[tuple[str, int]] = []
+        self.shows: list[tuple] = []
 
-    async def show(self, mode: str, level: int = 0) -> None:
-        self.shows.append((mode, level))
+    async def show(
+        self, mode: str, level: int = 0, color: tuple[int, int, int] | None = None
+    ) -> None:
+        self.shows.append((mode, level) if color is None else (mode, level, color))

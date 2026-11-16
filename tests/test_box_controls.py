@@ -58,7 +58,7 @@ async def test_play_pause_toggles(hass, box):
     box.player.media_content_id = None
     await box.ctrl.play_pause()
     assert box.player.calls == [("play", BOBO_URI, TRACK)]
-    assert box.led.shows == [("playing", 0)]
+    assert box.led.shows == [("playing", 0, (128, 0, 255))]
     assert box.ctrl.state is BoxState.PLAYING
 
 

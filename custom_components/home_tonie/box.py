@@ -16,6 +16,7 @@ from homeassistant.helpers.event import async_call_later
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    DEFAULT_BOX_COLOR,
     LED_ERROR,
     LED_HOLD,
     LED_LOADING,
@@ -54,7 +55,9 @@ class Player(Protocol):
 class Led(Protocol):
     """Schnittstelle von LedAdapter."""
 
-    async def show(self, mode: str, level: int = 0) -> None: ...
+    async def show(
+        self, mode: str, level: int = 0, color: tuple[int, int, int] = (0, 0, 0)
+    ) -> None: ...
 
 
 @dataclass(frozen=True)
@@ -68,6 +71,7 @@ class BoxConfig:
     ma_username: str
     max_volume: int
     volume_step: int
+    default_color: tuple[int, int, int] = DEFAULT_BOX_COLOR
 
 
 class BoxState(StrEnum):
@@ -235,7 +239,7 @@ class BoxController:
             # Player unverändert lassen, aber die LED nachziehen (z. B. nach Box-Neustart).
             _LOGGER.debug("Doppeltes tag_on für %s, LED aktualisiert", figure.name)
             if self._state is BoxState.PLAYING:
-                await self._led.show(LED_PLAYING)
+                await self._led.show(LED_PLAYING, color=self._color_for(figure))
             elif self._state is BoxState.PAUSED_BY_BOX:
                 await self._led.show(LED_HOLD)
             return
@@ -294,7 +298,7 @@ class BoxController:
                 else:
                     await self._cap_volume()
                     await self._play_figure(figure, self._snapshot_at_removal)
-                    await self._led.show(LED_PLAYING)
+                    await self._led.show(LED_PLAYING, color=self._color_for(figure))
                     self._set(BoxState.PLAYING, figure)
             except PlayerError as err:
                 await self._control_failed("Play/Pause", err)
@@ -552,8 +556,12 @@ class BoxController:
             after.state,
             after.media_content_id,
         )
-        await self._led.show(LED_PLAYING)
+        await self._led.show(LED_PLAYING, color=self._color_for(figure))
         self._set(BoxState.PLAYING, figure)
+
+    def _color_for(self, figure: Figure) -> tuple[int, int, int]:
+        """LED-Farbe einer Figur: eigene Farbe, sonst die Standardfarbe der Box."""
+        return figure.color or self._config.default_color
 
     async def _cap_volume(self) -> None:
         """Lautstärke auf höchstens max_volume senken."""

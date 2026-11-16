@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 from datetime import timedelta
 
 from homeassistant.components.persistent_notification import (
@@ -12,6 +13,8 @@ from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_fire_time_changed_exact
 
 from custom_components.home_tonie.box import BoxState
+
+from .conftest import BOBO, FEUERWEHR
 
 BOBO_URI = "spotify:album:4aawyAB9vmqN3uQ7FjRGTy"
 FEUERWEHR_URI = "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M"
@@ -29,7 +32,7 @@ async def test_known_figure_plays_and_caps_volume(hass, box):
     assert ("set_volume", 0.4) in box.player.calls
     assert ("play", BOBO_URI) in box.player.calls
     assert box.player.calls.index(("set_volume", 0.4)) < box.player.calls.index(("play", BOBO_URI))
-    assert box.led.shows == [("loading", 0), ("playing", 0)]
+    assert box.led.shows == [("loading", 0), ("playing", 0, (128, 0, 255))]
     assert box.ctrl.state is BoxState.PLAYING and box.ctrl.current_figure.name == "Bobo"
 
 
@@ -87,7 +90,7 @@ async def test_same_figure_resumes_at_remembered_track(hass, box):
     box.player.volume = 0.6  # Eltern haben aufgedreht
     await box.ctrl.tag_on("04A1B2C3")
     assert box.player.calls == [("set_volume", 0.4), ("play", BOBO_URI, TRACK)]
-    assert box.led.shows == [("loading", 0), ("playing", 0)]
+    assert box.led.shows == [("loading", 0), ("playing", 0, (128, 0, 255))]
     assert box.ctrl.state is BoxState.PLAYING
     assert box.ctrl.current_figure.name == "Bobo"
 
@@ -122,7 +125,7 @@ async def test_resume_falls_back_to_restart_if_start_item_fails(hass, box):
     box.player.fail_start_item = True
     await box.ctrl.tag_on("04A1B2C3")
     assert box.player.calls == [("play", BOBO_URI)]
-    assert box.led.shows == [("loading", 0), ("playing", 0)]
+    assert box.led.shows == [("loading", 0), ("playing", 0, (128, 0, 255))]
     assert box.ctrl.state is BoxState.PLAYING
 
 
@@ -234,7 +237,7 @@ async def test_player_error_on_removal_does_not_raise(hass, box):
     box.player.calls.clear()
     await box.ctrl.tag_on("04A1B2C3")
     assert box.player.calls[-1] == ("play", BOBO_URI)
-    assert box.led.shows[-1] == ("playing", 0)
+    assert box.led.shows[-1] == ("playing", 0, (128, 0, 255))
     assert box.ctrl.state is BoxState.PLAYING
 
 
@@ -307,7 +310,7 @@ async def test_same_figure_back_during_slow_pause_resumes(hass, box):
     await tag_on
     await hass.async_block_till_done()
     assert box.player.calls[-2:] == [("pause",), ("play", BOBO_URI, BOBO_URI)]
-    assert box.led.shows[-1] == ("playing", 0)
+    assert box.led.shows[-1] == ("playing", 0, (128, 0, 255))
     assert box.ctrl.state is BoxState.PLAYING
     assert box.ctrl.current_figure.name == "Bobo"
 
@@ -323,7 +326,7 @@ async def test_other_figure_during_slow_pause_keeps_playing(hass, box):
     await hass.async_block_till_done()
     assert box.player.calls[-1] == ("play", FEUERWEHR_URI)
     assert box.player.calls.index(("pause",)) < box.player.calls.index(("play", FEUERWEHR_URI))
-    assert box.led.shows[-1] == ("playing", 0)
+    assert box.led.shows[-1] == ("playing", 0, (128, 0, 255))
     assert box.ctrl.state is BoxState.PLAYING
     assert box.ctrl.current_figure.name == "Feuerwehr"
 
@@ -388,7 +391,7 @@ async def test_duplicate_tag_on_resends_playing_led(hass, box):
     box.led.shows.clear()
     await box.ctrl.tag_on("04A1B2C3")
     assert box.player.calls == calls
-    assert box.led.shows == [("playing", 0)]
+    assert box.led.shows == [("playing", 0, (128, 0, 255))]
     assert box.ctrl.state is BoxState.PLAYING
 
 
@@ -456,3 +459,29 @@ async def test_unexpected_error_on_resume_does_not_raise(hass, box):
     await box.ctrl.tag_on("04A1B2C3")
     assert box.led.shows[-1] == ("error", 0)
     assert box.ctrl.state is BoxState.IDLE
+
+
+async def test_playing_uses_figure_color(hass, box):
+    rot = dataclasses.replace(BOBO, color=(255, 0, 0))
+    box.ctrl._library.replace([rot, FEUERWEHR])
+    await box.ctrl.tag_on(BOBO.uid)
+    assert box.led.shows[-1] == ("playing", 0, (255, 0, 0))
+
+
+async def test_playing_falls_back_to_box_color(hass, box):
+    await box.ctrl.tag_on(BOBO.uid)
+    assert box.led.shows[-1] == ("playing", 0, (128, 0, 255))
+
+
+async def test_resume_and_button_resume_send_color(hass, box):
+    rot = dataclasses.replace(BOBO, color=(255, 0, 0))
+    box.ctrl._library.replace([rot, FEUERWEHR])
+    await box.ctrl.tag_on(BOBO.uid)
+    await box.ctrl.tag_off(BOBO.uid)
+    async_fire_time_changed_exact(hass, dt_util.utcnow() + timedelta(seconds=1.1))
+    await hass.async_block_till_done()
+    await box.ctrl.tag_on(BOBO.uid)  # Fortsetzen ab gemerktem Titel
+    assert box.led.shows[-1] == ("playing", 0, (255, 0, 0))
+    await box.ctrl.play_pause()  # Pause
+    await box.ctrl.play_pause()  # Taster-Resume
+    assert box.led.shows[-1] == ("playing", 0, (255, 0, 0))

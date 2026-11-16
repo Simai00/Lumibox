@@ -34,7 +34,7 @@ async def test_show_calls_node_specific_action(hass, esphome_device):
     calls = async_mock_service(hass, "esphome", "home_tonie_anna_set_led")
     await LedAdapter(hass, esphome_device.id).show(LED_VOLUME, 75)
     await hass.async_block_till_done()
-    assert calls[0].data == {"mode": "volume", "level": 75}
+    assert calls[0].data == {"mode": "volume", "level": 75, "r": 0, "g": 0, "b": 0}
 
 
 async def test_missing_action_warns_once(hass, esphome_device, caplog):
@@ -74,3 +74,17 @@ async def test_node_name_missing_device_name(hass):
         config_entry_id=entry.entry_id, identifiers={("esphome", "x")}
     )
     assert esphome_node_name(hass, dev.id) is None
+
+
+async def test_show_sends_rgb(hass, esphome_device):
+    calls = async_mock_service(hass, "esphome", "home_tonie_anna_set_led")
+    await LedAdapter(hass, esphome_device.id).show("playing", 0, (1, 2, 3))
+    await hass.async_block_till_done()
+    assert calls[0].data == {"mode": "playing", "level": 0, "r": 1, "g": 2, "b": 3}
+
+
+async def test_show_default_color_zero(hass, esphome_device):
+    calls = async_mock_service(hass, "esphome", "home_tonie_anna_set_led")
+    await LedAdapter(hass, esphome_device.id).show("off")
+    await hass.async_block_till_done()
+    assert calls[0].data == {"mode": "off", "level": 0, "r": 0, "g": 0, "b": 0}

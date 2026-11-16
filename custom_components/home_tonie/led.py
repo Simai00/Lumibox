@@ -41,7 +41,9 @@ class LedAdapter:
             self._warned = True
             _LOGGER.warning(msg, *args)
 
-    async def show(self, mode: str, level: int = 0) -> None:
+    async def show(
+        self, mode: str, level: int = 0, color: tuple[int, int, int] = (0, 0, 0)
+    ) -> None:
         """LED-Modus anzeigen; wirft nie."""
         node = esphome_node_name(self._hass, self._device_id)
         if not node:
@@ -58,7 +60,7 @@ class LedAdapter:
             return
         try:
             await self._hass.services.async_call(
-                "esphome", service, {"mode": mode, "level": level}, blocking=False
+                "esphome", service, {"mode": mode, "level": level, "r": color[0], "g": color[1], "b": color[2]}, blocking=False
             )
         except HomeAssistantError as err:
             _LOGGER.debug("set_led fehlgeschlagen: %s", err)

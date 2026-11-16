@@ -16,6 +16,7 @@ from pytest_homeassistant_custom_component.common import async_fire_time_changed
 
 from custom_components.home_tonie.box import BoxState
 from custom_components.home_tonie.const import (
+    CONF_DEFAULT_COLOR,
     CONF_MAX_VOLUME,
     CONF_MEDIA_URI,
     CONF_MODE,
@@ -305,3 +306,27 @@ async def test_unload_waits_for_inflight_events(hass, two_boxes_entry):
     # Kein Entprell-Timer darf das Unload überleben (sonst meldet die Testumgebung
     # einen lingering timer); der Controller hat nichts mehr ausstehend.
     assert ctrl._cancel_debounce is None
+
+
+async def test_box_without_default_color_key_uses_purple(hass, two_boxes_entry):
+    boxes = two_boxes_entry
+    await _tag_on(hass, boxes.dev_anna, "04-A1-B2-C3")
+    playing = [c.data for c in boxes.led["anna"] if c.data["mode"] == "playing"]
+    assert playing[-1] == {"mode": "playing", "level": 0, "r": 128, "g": 0, "b": 255}
+
+
+async def test_two_boxes_own_default_color(hass, two_boxes_entry):
+    boxes = two_boxes_entry
+    entry = boxes.entry
+    for name, color in (("Anna", [0, 255, 0]), ("Ben", [0, 0, 255])):
+        sub = boxes.box_subentry(name)
+        hass.config_entries.async_update_subentry(
+            entry, sub, data={**sub.data, CONF_DEFAULT_COLOR: color}
+        )
+        await hass.async_block_till_done()
+    await _tag_on(hass, boxes.dev_anna, "04-A1-B2-C3")
+    await _tag_on(hass, boxes.dev_ben, "04-A1-B2-C3")
+    anna = [c.data for c in boxes.led["anna"] if c.data["mode"] == "playing"][-1]
+    ben = [c.data for c in boxes.led["ben"] if c.data["mode"] == "playing"][-1]
+    assert (anna["r"], anna["g"], anna["b"]) == (0, 255, 0)
+    assert (ben["r"], ben["g"], ben["b"]) == (0, 0, 255)

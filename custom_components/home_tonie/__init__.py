@@ -15,6 +15,8 @@ from homeassistant.core import Event, HomeAssistant, callback
 
 from .box import BoxConfig, BoxController
 from .const import (
+    CONF_DEFAULT_COLOR,
+    DEFAULT_BOX_COLOR,
     CONF_ESPHOME_DEVICE_ID,
     CONF_MA_USERNAME,
     CONF_MAX_VOLUME,
@@ -26,7 +28,7 @@ from .const import (
     SUBENTRY_BOX,
 )
 from .led import LedAdapter
-from .library import FigureLibrary
+from .library import FigureLibrary, parse_rgb
 from .player import PlayerAdapter
 
 _LOGGER = logging.getLogger(__name__)
@@ -64,6 +66,7 @@ def _box_config(subentry_id: str, title: str, data: Mapping[str, Any]) -> BoxCon
         ma_username=data[CONF_MA_USERNAME],
         max_volume=int(data.get(CONF_MAX_VOLUME, DEFAULT_MAX_VOLUME)),
         volume_step=int(data.get(CONF_VOLUME_STEP, DEFAULT_VOLUME_STEP)),
+        default_color=parse_rgb(data.get(CONF_DEFAULT_COLOR)) or DEFAULT_BOX_COLOR,
     )
 
 
@@ -153,3 +156,4 @@ async def _async_update_listener(
 async def async_unload_entry(hass: HomeAssistant, entry: HomeTonieConfigEntry) -> bool:
     """Haupteintrag entladen; Listener und Controller-Shutdown laufen über async_on_unload."""
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
