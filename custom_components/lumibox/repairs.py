@@ -34,16 +34,27 @@ class FirmwareUpdateFlow(RepairsFlow):
         await self.hass.services.async_call(
             "update", "install", {"entity_id": entity_id}, blocking=False
         )
-        return self.async_create_entry(data={})
+        # Abbruch statt Eintrag: sonst löscht HA den Hinweis sofort, auch wenn das Update
+        # scheitert. Er verschwindet über die sw_version-Prüfung, sobald die neue Firmware läuft.
+        return self.async_abort(reason="update_started")
 
     def _update_entity_id(self) -> str | None:
-        """Update-Entität der Box, falls ein Update bereitsteht."""
-        for entry in er.async_entries_for_device(er.async_get(self.hass), self._device_id):
-            if entry.domain == "update" and entry.platform == "esphome":
-                state = self.hass.states.get(entry.entity_id)
-                if state is None or state.state != STATE_ON:
-                    return None
-                return entry.entity_id
+        """Eigene Update-Entität der Box mit verfügbarem Update (bevorzugt `on`).
+
+        Die ESPHome-Dashboard-Entität hat die reine MAC als unique_id (ohne "-") und
+        gehört nicht zur Firmware der Box; sie wird übersprungen.
+        """
+        candidates = [
+            entry.entity_id
+            for entry in er.async_entries_for_device(er.async_get(self.hass), self._device_id)
+            if entry.domain == "update"
+            and entry.platform == "esphome"
+            and "-" in entry.unique_id
+        ]
+        for entity_id in candidates:
+            state = self.hass.states.get(entity_id)
+            if state is not None and state.state == STATE_ON:
+                return entity_id
         return None
 
 

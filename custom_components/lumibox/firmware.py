@@ -52,7 +52,7 @@ def _check_box(hass: HomeAssistant, config: BoxConfig) -> None:
     if not outdated:
         ir.async_delete_issue(hass, DOMAIN, issue_id)
         return
-    current = parse_firmware_version(device.sw_version) or "unbekannt"
+    current = parse_firmware_version(device.sw_version) or "?"
     ir.async_create_issue(
         hass,
         DOMAIN,
@@ -64,6 +64,7 @@ def _check_box(hass: HomeAssistant, config: BoxConfig) -> None:
         translation_placeholders={
             "box": config.name,
             "current": current,
+            "device": device.name_by_user or device.name or config.name,
             "required": MIN_FIRMWARE_VERSION,
         },
     )
@@ -87,10 +88,21 @@ def async_setup_firmware_checks(
 
     @callback
     def _on_device_update(event: Event) -> None:
-        if event.data.get("action") != "update" or "sw_version" not in event.data.get("changes", {}):
-            return
         box = configs.get(event.data["device_id"])
-        if box is not None:
+        if box is None:
+            return
+        action = event.data.get("action")
+        if action == "remove":
+            ir.async_delete_issue(hass, DOMAIN, _issue_id(box.subentry_id))
+        elif action == "update" and "sw_version" in event.data.get("changes", {}):
             _check_box(hass, box)
 
     return hass.bus.async_listen(dr.EVENT_DEVICE_REGISTRY_UPDATED, _on_device_update)
+
+
+@callback
+def async_delete_all_issues(hass: HomeAssistant) -> None:
+    """Alle Firmware-Hinweise der Integration entfernen (beim Löschen des Eintrags)."""
+    for domain, issue_id in list(ir.async_get(hass).issues):
+        if domain == DOMAIN and issue_id.startswith(_ISSUE_PREFIX):
+            ir.async_delete_issue(hass, DOMAIN, issue_id)

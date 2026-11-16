@@ -27,7 +27,7 @@ from .const import (
     EVENT_TYPE,
     SUBENTRY_BOX,
 )
-from .firmware import async_setup_firmware_checks
+from .firmware import async_delete_all_issues, async_setup_firmware_checks
 from .led import LedAdapter
 from .library import FigureLibrary, parse_rgb
 from .player import PlayerAdapter
@@ -161,3 +161,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: LumiboxConfigEntry) -> 
     """Haupteintrag entladen; Listener und Controller-Shutdown laufen über async_on_unload."""
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: LumiboxConfigEntry) -> None:
+    """Beim Löschen des Eintrags keine Reparatur-Hinweise zurücklassen."""
+    async_delete_all_issues(hass)

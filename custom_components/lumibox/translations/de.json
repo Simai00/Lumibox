@@ -150,7 +150,7 @@
   "issues": {
     "firmware_outdated": {
       "title": "Die Firmware der Box {box} ist zu alt",
-      "description": "Die Firmware der Box {box} ist zu alt ({current}, benötigt {required}). Bitte unter Einstellungen › Geräte › {box} die Firmware aktualisieren.",
+      "description": "Die Firmware der Box {box} ist zu alt ({current}, benötigt {required}). Bitte unter Einstellungen › Geräte › {device} die Firmware aktualisieren.",
       "fix_flow": {
         "step": {
           "confirm": {
@@ -160,7 +160,8 @@
           }
         },
         "abort": {
-          "no_update": "Für diese Box ist gerade kein Update verfügbar. Prüfe, ob die Box eingeschaltet und mit dem WLAN verbunden ist."
+          "no_update": "Für diese Box ist gerade kein Update verfügbar. Prüfe, ob die Box eingeschaltet und mit dem WLAN verbunden ist.",
+          "update_started": "Das Update wurde gestartet. Die Box startet gleich neu. Der Hinweis verschwindet, sobald die neue Firmware läuft."
         }
       }
     }

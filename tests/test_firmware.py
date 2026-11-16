@@ -6,6 +6,8 @@ import pytest
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import device_registry as dr, entity_registry as er, issue_registry as ir
+from homeassistant.components.repairs import repairs_flow_manager
+from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import async_mock_service
 
 from custom_components.lumibox.const import DOMAIN, MIN_FIRMWARE_VERSION
@@ -76,7 +78,8 @@ async def test_issue_created_for_old_firmware(hass):
     assert issue.translation_key == "firmware_outdated"
     assert issue.translation_placeholders == {
         "box": "Anna",
-        "current": "unbekannt",
+        "current": "?",
+        "device": "Lumibox Anna",
         "required": MIN_FIRMWARE_VERSION,
     }
 
@@ -127,17 +130,20 @@ async def test_unload_removes_listener(hass):
     assert _issue(hass, sub.subentry_id) is None
 
 
-def _update_entity(hass, device, state):
+def _update_entity(hass, device, state, unique_id="AA:BB:CC:DD:EE:01-update-123"):
     reg = er.async_get(hass)
     ent = reg.async_get_or_create(
         "update",
         "esphome",
-        "upd1",
+        unique_id,
         config_entry=hass.config_entries.async_entries("esphome")[0],
         device_id=device.id,
     )
     hass.states.async_set(ent.entity_id, state)
     return ent
+
+
+DASHBOARD_UID = "AA:BB:CC:DD:EE:01"
 
 
 async def _start_flow(hass, device):
@@ -156,9 +162,30 @@ async def test_fix_flow_installs_update(hass, esphome_device):
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "confirm"
     result = await flow.async_step_confirm({})
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "update_started"
     assert len(calls) == 1
     assert calls[0].data["entity_id"] == ent.entity_id
+
+
+async def test_fix_flow_ignores_dashboard_entity(hass, esphome_device):
+    _update_entity(hass, esphome_device, "on", DASHBOARD_UID)
+    _update_entity(hass, esphome_device, "off")
+    calls = async_mock_service(hass, "update", "install")
+    flow = await _start_flow(hass, esphome_device)
+    result = await flow.async_step_confirm({})
+    assert result["reason"] == "no_update"
+    assert not calls
+
+
+async def test_fix_flow_prefers_native_on(hass, esphome_device):
+    _update_entity(hass, esphome_device, "off", DASHBOARD_UID)
+    native = _update_entity(hass, esphome_device, "on")
+    calls = async_mock_service(hass, "update", "install")
+    flow = await _start_flow(hass, esphome_device)
+    result = await flow.async_step_confirm({})
+    assert result["reason"] == "update_started"
+    assert calls[0].data["entity_id"] == native.entity_id
 
 
 async def test_fix_flow_aborts_without_update_entity(hass, esphome_device):
@@ -178,3 +205,33 @@ async def test_fix_flow_aborts_when_no_update_available(hass, esphome_device):
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "no_update"
     assert not calls
+
+
+async def test_issue_stays_after_update_started(hass):
+    assert await async_setup_component(hass, "repairs", {})
+    entry, sub, device = await _box_with_sw(hass, "2026.10.0")
+    _update_entity(hass, device, "on", "AA:BB:CC:DD:EE:21-update-1")
+    async_mock_service(hass, "update", "install")
+    manager = repairs_flow_manager(hass)
+    issue_id = f"firmware_outdated_{sub.subentry_id}"
+    result = await manager.async_init(DOMAIN, context={"issue_id": issue_id})
+    assert result["step_id"] == "confirm"
+    result = await manager.async_configure(result["flow_id"], {})
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "update_started"
+    assert _issue(hass, sub.subentry_id) is not None
+
+
+async def test_remove_entry_deletes_issues(hass):
+    entry, sub, _ = await _box_with_sw(hass, "2026.10.0")
+    assert _issue(hass, sub.subentry_id) is not None
+    await hass.config_entries.async_remove(entry.entry_id)
+    await hass.async_block_till_done()
+    assert _issue(hass, sub.subentry_id) is None
+
+
+async def test_issue_removed_when_device_removed(hass):
+    entry, sub, device = await _box_with_sw(hass, "2026.10.0")
+    dr.async_get(hass).async_remove_device(device.id)
+    await hass.async_block_till_done()
+    assert _issue(hass, sub.subentry_id) is None
