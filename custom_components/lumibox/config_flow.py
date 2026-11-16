@@ -1,4 +1,4 @@
-"""Config Flow der Home-Tonie-Integration (Haupteintrag und Subentries)."""
+"""Config Flow der Lumibox-Integration (Haupteintrag und Subentries)."""
 
 from __future__ import annotations
 
@@ -97,7 +97,7 @@ FIGURE_SCHEMA = vol.Schema(
 )
 
 
-class HomeTonieConfigFlow(ConfigFlow, domain=DOMAIN):
+class LumiboxConfigFlow(ConfigFlow, domain=DOMAIN):
     """Legt den einzigen Haupteintrag an."""
 
     VERSION = 1
@@ -115,11 +115,11 @@ class HomeTonieConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Einrichtung bestätigen lassen."""
         if user_input is not None:
-            return self.async_create_entry(title="Home Tonie", data={})
+            return self.async_create_entry(title="Lumibox", data={})
         return self.async_show_form(step_id="user")
 
 
-class _HomeTonieSubentryFlow(ConfigSubentryFlow):
+class _LumiboxSubentryFlow(ConfigSubentryFlow):
     """Gemeinsame Helfer für Box- und Figur-Flows."""
 
     def _is_reconfigure(self) -> bool:
@@ -143,7 +143,7 @@ class _HomeTonieSubentryFlow(ConfigSubentryFlow):
         return self.async_create_entry(title=title, data=data)
 
 
-class BoxSubentryFlow(_HomeTonieSubentryFlow):
+class BoxSubentryFlow(_LumiboxSubentryFlow):
     """Box hinzufügen oder bearbeiten."""
 
     def __init__(self) -> None:
@@ -233,7 +233,7 @@ class BoxSubentryFlow(_HomeTonieSubentryFlow):
         }
 
 
-class FigureSubentryFlow(_HomeTonieSubentryFlow):
+class FigureSubentryFlow(_LumiboxSubentryFlow):
     """Figur hinzufügen oder bearbeiten."""
 
     async def async_step_user(
@@ -306,7 +306,7 @@ class FigureSubentryFlow(_HomeTonieSubentryFlow):
         for sub in entry.subentries.values():
             if sub.subentry_type == SUBENTRY_BOX:
                 persistent_notification.async_dismiss(
-                    self.hass, f"home_tonie_unknown_{sub.subentry_id}"
+                    self.hass, f"lumibox_unknown_{sub.subentry_id}"
                 )
 
 
@@ -322,8 +322,8 @@ def _device_name(hass: HomeAssistant, device_id: str) -> str:
     """Anzeigename eines Geräts aus der Geräte-Registry."""
     device = dr.async_get(hass).async_get(device_id)
     if device is None:
-        return "Home Tonie"
-    return device.name_by_user or device.name or "Home Tonie"
+        return "Lumibox"
+    return device.name_by_user or device.name or "Lumibox"
 
 
 def _rgb(value: Any) -> list[int] | None:

@@ -2,8 +2,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Home Tonie",
-        "description": "Home Tonie einrichten? Boxen und Figuren werden danach auf der Integrationsseite hinzugefügt."
+        "title": "Lumibox",
+        "description": "Lumibox einrichten? Boxen und Figuren werden danach auf der Integrationsseite hinzugefügt."
       }
     },
     "abort": {
@@ -20,7 +20,7 @@
       "step": {
         "user": {
           "title": "Box hinzufügen",
-          "description": "Ordne eine Home-Tonie-Box einem Lautsprecher und einem Music-Assistant-Benutzer zu.",
+          "description": "Ordne eine Lumibox-Box einem Lautsprecher und einem Music-Assistant-Benutzer zu.",
           "data": {
             "name": "Name",
             "esphome_device_id": "ESPHome-Gerät",
@@ -32,7 +32,7 @@
           },
           "data_description": {
             "name": "Zum Beispiel der Name des Kindes. Leer lassen, um den Gerätenamen zu verwenden.",
-            "esphome_device_id": "Die Home-Tonie-Box (ESPHome-Gerät). Jedes Gerät kann nur einer Box zugeordnet sein.",
+            "esphome_device_id": "Die Lumibox-Box (ESPHome-Gerät). Jedes Gerät kann nur einer Box zugeordnet sein.",
             "player_entity_id": "Music-Assistant-Player, auf dem die Box spielt.",
             "ma_username": "Music-Assistant-Benutzer des Kindes (z. B. anna). Sein Anbieterfilter bestimmt, welcher Spotify-Account verwendet wird.",
             "max_volume": "Obergrenze für Lautstärkeänderungen durch die Box, in Prozent.",
@@ -42,7 +42,7 @@
         },
         "reconfigure": {
           "title": "Box bearbeiten",
-          "description": "Ordne eine Home-Tonie-Box einem Lautsprecher und einem Music-Assistant-Benutzer zu.",
+          "description": "Ordne eine Lumibox-Box einem Lautsprecher und einem Music-Assistant-Benutzer zu.",
           "data": {
             "name": "Name",
             "esphome_device_id": "ESPHome-Gerät",
@@ -54,7 +54,7 @@
           },
           "data_description": {
             "name": "Zum Beispiel der Name des Kindes. Leer lassen, um den Gerätenamen zu verwenden.",
-            "esphome_device_id": "Die Home-Tonie-Box (ESPHome-Gerät). Jedes Gerät kann nur einer Box zugeordnet sein.",
+            "esphome_device_id": "Die Lumibox-Box (ESPHome-Gerät). Jedes Gerät kann nur einer Box zugeordnet sein.",
             "player_entity_id": "Music-Assistant-Player, auf dem die Box spielt.",
             "ma_username": "Music-Assistant-Benutzer des Kindes (z. B. anna). Sein Anbieterfilter bestimmt, welcher Spotify-Account verwendet wird.",
             "max_volume": "Obergrenze für Lautstärkeänderungen durch die Box, in Prozent.",

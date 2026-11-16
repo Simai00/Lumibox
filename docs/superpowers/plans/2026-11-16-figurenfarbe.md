@@ -28,7 +28,7 @@
   - Ungefähr eine Runde pro 3 s (24 LEDs → ~125 ms pro Schritt).
 - `color_correct: [50%, 50%, 50%]` bleibt.
 - Texte de + en. Bestehende Subentries ohne die neuen Schlüssel funktionieren unverändert.
-- Docker-PATH in Bash: `export PATH="$PATH:/c/Users/simon/AppData/Local/Programs/DockerDesktop/resources/bin"`.
+- Docker muss im PATH sein.
 
 ## Review Focus
 

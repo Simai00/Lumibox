@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 
-from custom_components.home_tonie.box import BoxState
+from custom_components.lumibox.box import BoxState
 
 
 BOBO_URI = "spotify:album:4aawyAB9vmqN3uQ7FjRGTy"

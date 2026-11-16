@@ -4,7 +4,7 @@ import pytest
 from homeassistant.config_entries import ConfigSubentryData
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.home_tonie.const import (
+from custom_components.lumibox.const import (
     CONF_MEDIA_URI,
     CONF_MODE,
     CONF_UID,
@@ -12,7 +12,7 @@ from custom_components.home_tonie.const import (
     SUBENTRY_BOX,
     SUBENTRY_FIGURE,
 )
-from custom_components.home_tonie.library import (
+from custom_components.lumibox.library import (
     Figure,
     FigureLibrary,
     InvalidMediaUri,

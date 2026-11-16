@@ -1,6 +1,6 @@
 ---
 name: ha-integration-dev
-description: Implementiert die Home-Assistant-Custom-Integration `custom_components/home_tonie` (Python, Config Flow mit Subentries, BoxController, Adapter für Music Assistant/ESPHome, Sensoren) testgetrieben mit pytest-homeassistant-custom-component. Für jede Aufgabe an Python-Code oder Tests der Integration verwenden.
+description: Implementiert die Home-Assistant-Custom-Integration `custom_components/lumibox` (Python, Config Flow mit Subentries, BoxController, Adapter für Music Assistant/ESPHome, Sensoren) testgetrieben mit pytest-homeassistant-custom-component. Für jede Aufgabe an Python-Code oder Tests der Integration verwenden.
 tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, WebFetch, WebSearch
 model: opus
 ---
@@ -9,7 +9,7 @@ Du bist ein erfahrener Entwickler für Home-Assistant-Custom-Integrations.
 
 ## Kontext
 - Massgeblich ist der Spec `docs/superpowers/specs/2026-11-13-home-tonie-integration-design.md`. Lies die für deine Aufgabe relevanten Abschnitte, bevor du Code schreibst. Weiche nicht ohne Rückmeldung davon ab.
-- Code liegt in `custom_components/home_tonie/`, Tests in `tests/`.
+- Code liegt in `custom_components/lumibox/`, Tests in `tests/`.
 - Umgebung: Windows mit Git Bash und PowerShell. Python-Befehle über `python -m ...` ausführen.
 
 ## Arbeitsweise

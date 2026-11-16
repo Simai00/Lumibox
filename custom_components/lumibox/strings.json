@@ -2,12 +2,12 @@
   "config": {
     "step": {
       "user": {
-        "title": "Home Tonie",
-        "description": "Set up Home Tonie? Boxes and figures are added afterwards on the integration page."
+        "title": "Lumibox",
+        "description": "Set up Lumibox? Boxes and figures are added afterwards on the integration page."
       }
     },
     "abort": {
-      "single_instance_allowed": "Already configured. Only a single configuration possible."
+      "single_instance_allowed": "[%key:common::config_flow::abort::single_instance_allowed%]"
     }
   },
   "config_subentries": {
@@ -20,7 +20,7 @@
       "step": {
         "user": {
           "title": "Add box",
-          "description": "Assign a Home Tonie box to a speaker and a Music Assistant user.",
+          "description": "Assign a Lumibox box to a speaker and a Music Assistant user.",
           "data": {
             "name": "Name",
             "esphome_device_id": "ESPHome device",
@@ -32,7 +32,7 @@
           },
           "data_description": {
             "name": "For example the child's name. Leave empty to use the device name.",
-            "esphome_device_id": "The Home Tonie box (ESPHome device). Each device can belong to only one box.",
+            "esphome_device_id": "The Lumibox box (ESPHome device). Each device can belong to only one box.",
             "player_entity_id": "Music Assistant player the box plays on.",
             "ma_username": "Music Assistant user of the child (for example anna). Their provider filter decides which Spotify account is used.",
             "max_volume": "Upper limit for volume changes from the box, in percent.",
@@ -42,7 +42,7 @@
         },
         "reconfigure": {
           "title": "Edit box",
-          "description": "Assign a Home Tonie box to a speaker and a Music Assistant user.",
+          "description": "Assign a Lumibox box to a speaker and a Music Assistant user.",
           "data": {
             "name": "Name",
             "esphome_device_id": "ESPHome device",
@@ -54,7 +54,7 @@
           },
           "data_description": {
             "name": "For example the child's name. Leave empty to use the device name.",
-            "esphome_device_id": "The Home Tonie box (ESPHome device). Each device can belong to only one box.",
+            "esphome_device_id": "The Lumibox box (ESPHome device). Each device can belong to only one box.",
             "player_entity_id": "Music Assistant player the box plays on.",
             "ma_username": "Music Assistant user of the child (for example anna). Their provider filter decides which Spotify account is used.",
             "max_volume": "Upper limit for volume changes from the box, in percent.",
@@ -73,7 +73,7 @@
       },
       "abort": {
         "no_ma_players": "No Music Assistant player found. Set up Music Assistant first.",
-        "reconfigure_successful": "Re-configuration was successful"
+        "reconfigure_successful": "[%key:common::config_flow::abort::reconfigure_successful%]"
       }
     },
     "figure": {
@@ -126,7 +126,7 @@
         "invalid_media_uri": "Not a valid Spotify link. Short links (spotify.link) are not supported: in the Spotify app use \"Share → Copy link\", or copy the address from open.spotify.com."
       },
       "abort": {
-        "reconfigure_successful": "Re-configuration was successful"
+        "reconfigure_successful": "[%key:common::config_flow::abort::reconfigure_successful%]"
       }
     }
   },

@@ -5,7 +5,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from pytest_homeassistant_custom_component.common import async_mock_service
 
-from custom_components.home_tonie.player import PlayerAdapter, PlayerError, PlayerSnapshot
+from custom_components.lumibox.player import PlayerAdapter, PlayerError, PlayerSnapshot
 
 ENTITY = "media_player.kinderzimmer"
 

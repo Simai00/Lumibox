@@ -7,14 +7,14 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from . import HomeTonieConfigEntry
+from . import LumiboxConfigEntry
 from .box import BoxController
 from .const import DOMAIN
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: HomeTonieConfigEntry,
+    entry: LumiboxConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Zwei Sensoren pro Box anlegen, jeweils dem Box-Subentry zugeordnet."""
@@ -38,7 +38,7 @@ class _BoxSensor(SensorEntity):
         self._attr_unique_id = f"{config.subentry_id}_{key}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, config.subentry_id)},
-            name=f"Home Tonie {config.name}",
+            name=f"Lumibox {config.name}",
         )
 
     async def async_added_to_hass(self) -> None:

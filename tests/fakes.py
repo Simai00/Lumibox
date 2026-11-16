@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 
-from custom_components.home_tonie.player import PlayerError, PlayerSnapshot
+from custom_components.lumibox.player import PlayerError, PlayerSnapshot
 
 
 class FakePlayer:

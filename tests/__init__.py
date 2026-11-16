@@ -1,1 +1,1 @@
-"""Tests für die Home-Tonie-Integration."""
+"""Tests für die Lumibox-Integration."""

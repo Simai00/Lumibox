@@ -8,22 +8,22 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
 
-from custom_components.home_tonie.const import LED_OFF, LED_PLAYING, LED_VOLUME
-from custom_components.home_tonie.led import LedAdapter, esphome_node_name
+from custom_components.lumibox.const import LED_OFF, LED_PLAYING, LED_VOLUME
+from custom_components.lumibox.led import LedAdapter, esphome_node_name
 
 
 @pytest.fixture
 def esphome_device(hass: HomeAssistant):
-    entry = MockConfigEntry(domain="esphome", data={"device_name": "home-tonie-anna"})
+    entry = MockConfigEntry(domain="esphome", data={"device_name": "lumibox-anna"})
     entry.add_to_hass(hass)
     return dr.async_get(hass).async_get_or_create(
         config_entry_id=entry.entry_id,
-        identifiers={("esphome", "home-tonie-anna")},
+        identifiers={("esphome", "lumibox-anna")},
     )
 
 
 async def test_node_name_resolved(hass, esphome_device):
-    assert esphome_node_name(hass, esphome_device.id) == "home-tonie-anna"
+    assert esphome_node_name(hass, esphome_device.id) == "lumibox-anna"
 
 
 async def test_node_name_unknown_device(hass):
@@ -31,7 +31,7 @@ async def test_node_name_unknown_device(hass):
 
 
 async def test_show_calls_node_specific_action(hass, esphome_device):
-    calls = async_mock_service(hass, "esphome", "home_tonie_anna_set_led")
+    calls = async_mock_service(hass, "esphome", "lumibox_anna_set_led")
     await LedAdapter(hass, esphome_device.id).show(LED_VOLUME, 75)
     await hass.async_block_till_done()
     assert calls[0].data == {"mode": "volume", "level": 75, "r": 0, "g": 0, "b": 0}
@@ -55,7 +55,7 @@ async def test_node_name_fallback_config_entries(hass, esphome_device):
     entry_id = esphome_device.config_entry_id
     fake = SimpleNamespace(config_entries={entry_id})
     with patch.object(dr.DeviceRegistry, "async_get", return_value=fake):
-        assert esphome_node_name(hass, "x") == "home-tonie-anna"
+        assert esphome_node_name(hass, "x") == "lumibox-anna"
 
 
 async def test_node_name_non_esphome_entry(hass):
@@ -77,14 +77,14 @@ async def test_node_name_missing_device_name(hass):
 
 
 async def test_show_sends_rgb(hass, esphome_device):
-    calls = async_mock_service(hass, "esphome", "home_tonie_anna_set_led")
+    calls = async_mock_service(hass, "esphome", "lumibox_anna_set_led")
     await LedAdapter(hass, esphome_device.id).show("playing", 0, (1, 2, 3))
     await hass.async_block_till_done()
     assert calls[0].data == {"mode": "playing", "level": 0, "r": 1, "g": 2, "b": 3}
 
 
 async def test_show_default_color_zero(hass, esphome_device):
-    calls = async_mock_service(hass, "esphome", "home_tonie_anna_set_led")
+    calls = async_mock_service(hass, "esphome", "lumibox_anna_set_led")
     await LedAdapter(hass, esphome_device.id).show("off")
     await hass.async_block_till_done()
     assert calls[0].data == {"mode": "off", "level": 0, "r": 0, "g": 0, "b": 0}

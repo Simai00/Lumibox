@@ -12,7 +12,7 @@ from homeassistant.components.persistent_notification import (
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_fire_time_changed_exact
 
-from custom_components.home_tonie.box import BoxState
+from custom_components.lumibox.box import BoxState
 
 from .conftest import BOBO, FEUERWEHR
 
@@ -191,9 +191,9 @@ async def test_unknown_figure_notifies(hass, box):
     await box.ctrl.tag_on("ff:ee")
     assert box.ctrl.last_unknown_uid == "FFEE"
     notifications = _async_get_or_create_notifications(hass)
-    note = notifications["home_tonie_unknown_box_anna"]
+    note = notifications["lumibox_unknown_box_anna"]
     assert note["message"] == (
-        "Neue Figur auf Box Anna erkannt (UID FFEE). Unter Einstellungen → Home Tonie → "
+        "Neue Figur auf Box Anna erkannt (UID FFEE). Unter Einstellungen → Lumibox → "
         "Figur hinzufügen anlegen, die UID ist vorausgefüllt."
     )
     assert box.led.shows == [("unknown", 0)]

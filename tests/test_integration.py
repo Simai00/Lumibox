@@ -14,8 +14,8 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_fire_time_changed_exact
 
-from custom_components.home_tonie.box import BoxState
-from custom_components.home_tonie.const import (
+from custom_components.lumibox.box import BoxState
+from custom_components.lumibox.const import (
     CONF_DEFAULT_COLOR,
     CONF_MAX_VOLUME,
     CONF_MEDIA_URI,
@@ -96,7 +96,7 @@ async def test_two_boxes_independent(hass, two_boxes_entry):
 
 async def test_foreign_and_malformed_events_ignored(hass, two_boxes_entry, caplog):
     boxes = two_boxes_entry
-    caplog.set_level(logging.DEBUG, logger="custom_components.home_tonie")
+    caplog.set_level(logging.DEBUG, logger="custom_components.lumibox")
     for data in (
         {"device_id": "fremdes_geraet", "action": "tag_on", "uid": "04A1B2C3"},
         {"action": "tag_on", "uid": "04A1B2C3"},

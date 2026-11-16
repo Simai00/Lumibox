@@ -4,7 +4,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-IMAGE="home-tonie-test"
+IMAGE="lumibox-test"
 REQ_HASH="$(cat requirements_test.txt Dockerfile.test | cksum | cut -d" " -f1)"
 
 current_hash="$(docker image inspect --format '{{ index .Config.Labels "requirements-hash" }}' "$IMAGE" 2>/dev/null || true)"

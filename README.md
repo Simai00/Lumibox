@@ -1,6 +1,6 @@
-# Home Assistant Tonie Box
+# Lumibox
 
-Eine quelloffene, physische Audio-Steuerbox auf Basis eines ESP32, ESPHome und Home Assistant. Inspiriert vom Bedienkonzept der Toniebox steuert das Auflegen und Abheben von mit NFC-Tags versehenen 3D-Druck-Figuren die Musik- und Hörspielwiedergabe auf beliebigen vernetzten Smart Speakern.
+Eine quelloffene, physische Audio-Steuerbox auf Basis eines ESP32, ESPHome und Home Assistant. Audio-Box mit NFC-Figuren für kleine Kinder: Das Auflegen und Abheben von mit NFC-Tags versehenen 3D-Druck-Figuren die Musik- und Hörspielwiedergabe auf beliebigen vernetzten Smart Speakern.
 
 ## Hardware
 
@@ -49,10 +49,10 @@ Eine quelloffene, physische Audio-Steuerbox auf Basis eines ESP32, ESPHome und H
 
 ## Architektur
 
-Die Box ist "dumm": Sie meldet nur Ereignisse (Figur aufgelegt/abgenommen, Drehen, Tasten) an Home Assistant und zeigt LED-Zustände an. Die gesamte Logik und alle Figurendaten liegen in der Home-Assistant-Integration `home_tonie`. Die Wiedergabe läuft über Music Assistant (Spotify) auf Sonos oder HomePod mini. Neue Figuren oder geändertes Verhalten brauchen kein Neu-Flashen.
+Die Box ist "dumm": Sie meldet nur Ereignisse (Figur aufgelegt/abgenommen, Drehen, Tasten) an Home Assistant und zeigt LED-Zustände an. Die gesamte Logik und alle Figurendaten liegen in der Home-Assistant-Integration `lumibox`. Die Wiedergabe läuft über Music Assistant (Spotify) auf Sonos oder HomePod mini. Neue Figuren oder geändertes Verhalten brauchen kein Neu-Flashen.
 
 ```
-Box (ESPHome) --Events--> Home Assistant (home_tonie) --> Music Assistant --> Lautsprecher
+Box (ESPHome) --Events--> Home Assistant (lumibox) --> Music Assistant --> Lautsprecher
 Box (ESPHome) <--set_led-- Home Assistant
 ```
 
@@ -69,41 +69,41 @@ Details: [Design-Spezifikation](docs/superpowers/specs/2026-11-13-home-tonie-int
 
 ## Installation
 
-**Über HACS:** HACS, Menü, "Benutzerdefinierte Repositories", `https://github.com/Simai00/home-tonie` mit Kategorie "Integration" hinzufügen, "Home Tonie" installieren und Home Assistant neu starten.
+**Über HACS:** HACS, Menü, "Benutzerdefinierte Repositories", `https://github.com/Simai00/lumibox` mit Kategorie "Integration" hinzufügen, "Lumibox" installieren und Home Assistant neu starten.
 
-**Manuell:** Den Ordner `custom_components/home_tonie` in das Verzeichnis `custom_components` der Home-Assistant-Konfiguration kopieren und Home Assistant neu starten.
+**Manuell:** Den Ordner `custom_components/lumibox` in das Verzeichnis `custom_components` der Home-Assistant-Konfiguration kopieren und Home Assistant neu starten.
 
 ## Firmware flashen
 
-Die komplette Firmware einer Box steht in einer einzigen Datei: `esphome/home-tonie-common.yaml` (Gerätename `home-tonie`).
+Die komplette Firmware einer Box steht in einer einzigen Datei: `esphome/lumibox.yaml` (Gerätename `lumibox`).
 
-1. **Weitere Box:** Die Datei kopieren (z. B. `home-tonie-carla.yaml`, oder im ESPHome Builder als neues Gerät einfügen) und darin anpassen:
-   - `esphome: name` und `friendly_name` (z. B. `home-tonie-carla` / `Home Tonie Carla`), jeder Gerätename nur einmal;
-   - `wifi: ap: ssid` (Fallback-WLAN, z. B. `Home Tonie Carla Fallback`);
+1. **Weitere Box:** Die Datei kopieren (z. B. `lumibox-carla.yaml`, oder im ESPHome Builder als neues Gerät einfügen) und darin anpassen:
+   - `esphome: name` und `friendly_name` (z. B. `lumibox-carla` / `Lumibox Carla`), jeder Gerätename nur einmal;
+   - `wifi: ap: ssid` (Fallback-WLAN, z. B. `Lumibox Carla Fallback`);
    - `api: encryption: key` (eigener Schlüssel pro Box, als `!secret`).
-2. Die Konfiguration prüfen (benötigt Docker): `bash scripts/esphome-config.sh home-tonie-common.yaml`
-3. Mit ESPHome flashen und die Box in Home Assistant zur ESPHome-Integration hinzufügen. `esphome/secrets.yaml` (WLAN-Zugangsdaten, `home_tonie__encryption_key`) muss lokal vorhanden sein und wird nicht eingecheckt.
+2. Die Konfiguration prüfen (benötigt Docker): `bash scripts/esphome-config.sh lumibox.yaml`
+3. Mit ESPHome flashen und die Box in Home Assistant zur ESPHome-Integration hinzufügen. `esphome/secrets.yaml` (WLAN-Zugangsdaten, `lumibox_encryption_key`) muss lokal vorhanden sein und wird nicht eingecheckt.
 
 ## Einrichtung
 
-1. Einstellungen, Geräte & Dienste, Integration hinzufügen, "Home Tonie".
+1. Einstellungen, Geräte & Dienste, Integration hinzufügen, "Lumibox".
 2. **Box hinzufügen:** Name, ESPHome-Gerät der Box, Ziel-Lautsprecher, Music-Assistant-Benutzer des Kindes, maximale Lautstärke, Schrittweite pro Encoder-Raste und Standardfarbe (vorbelegt Lila) festlegen.
 3. **Figur hinzufügen:** Name, UID des Tags und Spotify-Link (Album, Playlist, Titel, Künstler, Podcast, Folge oder Hörbuch; `https://open.spotify.com/...` oder `spotify:...`). Optional eine **Farbe**: In dieser Farbe dreht der Spinner im LED-Ring, solange die Figur spielt. Ohne eigene Farbe gilt die Standardfarbe der Box.
 
 **Wichtig:** Integration und Firmware zusammen aktualisieren. Die Integration schickt die Farbe an `set_led` mit (`r`, `g`, `b`), ältere Firmware kennt diese Felder nicht.
 
-**Figuren anlernen:** Eine unbekannte Figur auf eine Box legen. Die Box blinkt rot und Home Assistant zeigt eine Benachrichtigung mit der UID. Dann bei "Home Tonie" "Figur hinzufügen" wählen: Die UID ist bereits eingetragen, es fehlen nur Name und Spotify-Link. Nach dem Speichern die Figur einmal abheben und wieder auflegen, damit sie zu spielen beginnt.
+**Figuren anlernen:** Eine unbekannte Figur auf eine Box legen. Die Box blinkt rot und Home Assistant zeigt eine Benachrichtigung mit der UID. Dann bei "Lumibox" "Figur hinzufügen" wählen: Die UID ist bereits eingetragen, es fehlen nur Name und Spotify-Link. Nach dem Speichern die Figur einmal abheben und wieder auflegen, damit sie zu spielen beginnt.
 
 ## Manuelle Testcheckliste
 
-**Events (Entwicklerwerkzeuge, Ereignisse, auf `esphome.home_tonie` lauschen):**
+**Events (Entwicklerwerkzeuge, Ereignisse, auf `esphome.lumibox` lauschen):**
 1. Figur auflegen: `action: tag_on` mit `uid` und `device_id`.
 2. Figur abnehmen: `tag_off` mit derselben `uid`.
 3. Encoder rechts drehen: `rotate_cw`, links: `rotate_ccw`. Ein Event pro Raste.
 4. Encoder drücken: `play_pause`. Taster GPIO26: `prev`, GPIO27: `next`. Ein Event pro Druck.
 5. `device_id` gehört zur richtigen Box (Anna bzw. Ben).
 
-**LED (Entwicklerwerkzeuge, Aktionen, `esphome.home_tonie_anna_set_led` bzw. `esphome.home_tonie_ben_set_led`, Felder `mode`, `level`, `r`, `g`, `b`):**
+**LED (Entwicklerwerkzeuge, Aktionen, `esphome.lumibox_xxxxxx_set_led` bzw. `esphome.lumibox_yyyyyy_set_led`, Felder `mode`, `level`, `r`, `g`, `b`):**
 6. `off`: Ring aus (auch nach dem Booten).
 7. `loading`: weisser Spinner bis zum nächsten Modus.
 8. `playing` mit `r: 255, g: 0, b: 0`: Ring rot (ca. 40 %), ein hellerer roter Punkt mit Schweif dreht etwa eine Runde in 3 s, dauerhaft. Danach `volume` mit `level: 50`: nach ca. 1,5 s wieder der rote Spinner.
@@ -126,8 +126,8 @@ Die komplette Firmware einer Box steht in einer einzigen Datei: `esphome/home-to
 
 ## Hinweise und Fehlersuche
 
-- **Gerätename geändert:** Wer `name` in der Firmware ändert, muss die Box in Home Assistant neu zur ESPHome-Integration hinzufügen und sie danach in der Box-Konfiguration von Home Tonie neu auswählen.
+- **Gerätename geändert:** Wer `name` in der Firmware ändert, muss die Box in Home Assistant neu zur ESPHome-Integration hinzufügen und sie danach in der Box-Konfiguration von Lumibox neu auswählen.
 - **Keine Events im Ereignis-Monitor:** Als Fehlersuche in den Optionen des ESPHome-Geräts "Allow the device to perform Home Assistant actions" aktivieren. Normalerweise ist das nicht nötig.
-- **Helligkeit im Haltemodus:** Sie ist bewusst niedrig (10 % bei 50 % Gesamtbegrenzung) und kann in `esphome/home-tonie-common.yaml` angepasst werden.
+- **Helligkeit im Haltemodus:** Sie ist bewusst niedrig (10 % bei 50 % Gesamtbegrenzung) und kann in `esphome/lumibox.yaml` angepasst werden.
 - **Spotify-Kurzlinks** (`spotify.link`) werden nicht unterstützt. Den vollständigen Link `open.spotify.com/...` oder die URI `spotify:...` verwenden.
 - **Ein Stream pro Spotify-Account:** Spotify erlaubt nur eine gleichzeitige Wiedergabe pro Account. Jede Box braucht daher ihren eigenen Account und Music-Assistant-Benutzer. Zwei Boxen mit demselben Benutzer können nicht gleichzeitig spielen.

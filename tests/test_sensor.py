@@ -9,7 +9,7 @@ from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_fire_time_changed_exact
 
-from custom_components.home_tonie.const import DOMAIN, EVENT_TYPE
+from custom_components.lumibox.const import DOMAIN, EVENT_TYPE
 
 
 def _entity_id(hass, subentry_id: str, key: str) -> str:
@@ -35,12 +35,12 @@ async def test_sensors_registered_per_box(hass, two_boxes_entry):
             assert entry.config_subentry_id == sub_id
             device = dev_reg.async_get(entry.device_id)
             assert device.identifiers == {(DOMAIN, sub_id)}
-            assert device.name == f"Home Tonie {name}"
+            assert device.name == f"Lumibox {name}"
             assert device.config_subentry_id == sub_id
             assert entry.translation_key == key
             state = hass.states.get(entity_id)
             assert state.state == STATE_UNKNOWN
-            assert state.attributes["friendly_name"] == f"Home Tonie {name} {label}"
+            assert state.attributes["friendly_name"] == f"Lumibox {name} {label}"
 
 
 async def test_current_figure_follows_box(hass, two_boxes_entry):

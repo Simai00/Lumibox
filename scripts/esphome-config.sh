@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Validiert eine ESPHome-Konfiguration im Container: scripts/esphome-config.sh <datei im esphome/-Ordner>
-# Beispiel: bash scripts/esphome-config.sh home-tonie-common.yaml
+# Beispiel: bash scripts/esphome-config.sh lumibox.yaml
 set -euo pipefail
 
 if [ $# -ne 1 ]; then

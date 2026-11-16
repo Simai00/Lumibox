@@ -1,4 +1,4 @@
-"""Home-Tonie-Integration: Setup, Event-Routing und Hot-Update der Figuren."""
+"""Lumibox-Integration: Setup, Event-Routing und Hot-Update der Figuren."""
 
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ PLATFORMS = [Platform.SENSOR]
 
 
 @dataclass
-class HomeTonieData:
+class LumiboxData:
     """Laufzeitdaten des Haupteintrags."""
 
     library: FigureLibrary
@@ -45,7 +45,7 @@ class HomeTonieData:
     last_unknown_uid: str | None = None
 
 
-type HomeTonieConfigEntry = ConfigEntry[HomeTonieData]
+type LumiboxConfigEntry = ConfigEntry[LumiboxData]
 
 
 def _box_snapshot(entry: ConfigEntry) -> dict[str, dict[str, Any]]:
@@ -70,10 +70,10 @@ def _box_config(subentry_id: str, title: str, data: Mapping[str, Any]) -> BoxCon
     )
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: HomeTonieConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: LumiboxConfigEntry) -> bool:
     """Haupteintrag einrichten: Bibliothek, Controller pro Box, Event-Listener."""
     library = FigureLibrary(FigureLibrary.figures_from_entry(entry))
-    data = HomeTonieData(library=library, controllers={})
+    data = LumiboxData(library=library, controllers={})
 
     @callback
     def _on_unknown_tag(uid: str) -> None:
@@ -114,7 +114,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HomeTonieConfigEntry) ->
         task = entry.async_create_task(
             hass,
             _dispatch(controller, dict(event.data)),
-            f"home_tonie Ereignis {controller.config.name}",
+            f"lumibox Ereignis {controller.config.name}",
         )
         if not task.done():
             inflight.add(task)
@@ -143,17 +143,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: HomeTonieConfigEntry) ->
 
 
 async def _async_update_listener(
-    boxes_at_setup: dict[str, dict[str, Any]], hass: HomeAssistant, entry: HomeTonieConfigEntry
+    boxes_at_setup: dict[str, dict[str, Any]], hass: HomeAssistant, entry: LumiboxConfigEntry
 ) -> None:
     """Box-Änderungen → Reload; nur Figuren geändert → Bibliothek ersetzen."""
     if _box_snapshot(entry) != boxes_at_setup:
-        _LOGGER.debug("Box-Konfiguration geändert, lade Home Tonie neu")
+        _LOGGER.debug("Box-Konfiguration geändert, lade Lumibox neu")
         hass.config_entries.async_schedule_reload(entry.entry_id)
         return
     entry.runtime_data.library.replace(FigureLibrary.figures_from_entry(entry))
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: HomeTonieConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: LumiboxConfigEntry) -> bool:
     """Haupteintrag entladen; Listener und Controller-Shutdown laufen über async_on_unload."""
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 

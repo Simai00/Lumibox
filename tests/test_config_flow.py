@@ -10,7 +10,7 @@ from homeassistant.config_entries import SOURCE_RECONFIGURE, SOURCE_USER
 from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.home_tonie.const import (
+from custom_components.lumibox.const import (
     CONF_COLOR,
     CONF_DEFAULT_COLOR,
     CONF_ESPHOME_DEVICE_ID,
@@ -74,11 +74,11 @@ async def test_add_box(hass, loaded_entry, esphome_device, ma_player):
         },
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "Home Tonie Anna"
+    assert result["title"] == "Lumibox Anna"
     (box,) = _subentries(loaded_entry, SUBENTRY_BOX)
-    assert box.title == "Home Tonie Anna"
+    assert box.title == "Lumibox Anna"
     assert dict(box.data) == {
-        "name": "Home Tonie Anna",
+        "name": "Lumibox Anna",
         CONF_ESPHOME_DEVICE_ID: esphome_device.id,
         CONF_PLAYER_ENTITY_ID: "media_player.kinderzimmer",
         CONF_MA_USERNAME: "anna",
@@ -358,7 +358,7 @@ async def test_figure_created_clears_unknown_uid_and_notifications(
     hass, loaded_entry_with_box
 ):
     (box,) = _subentries(loaded_entry_with_box, SUBENTRY_BOX)
-    notification_id = f"home_tonie_unknown_{box.subentry_id}"
+    notification_id = f"lumibox_unknown_{box.subentry_id}"
     persistent_notification.async_create(hass, "Neue Figur", notification_id=notification_id)
     loaded_entry_with_box.runtime_data.last_unknown_uid = "FFEE"
 
@@ -376,7 +376,7 @@ async def test_figure_created_clears_unknown_uid_and_notifications(
 
 async def test_figure_with_other_uid_keeps_unknown_uid(hass, loaded_entry_with_box):
     (box,) = _subentries(loaded_entry_with_box, SUBENTRY_BOX)
-    notification_id = f"home_tonie_unknown_{box.subentry_id}"
+    notification_id = f"lumibox_unknown_{box.subentry_id}"
     persistent_notification.async_create(hass, "Neue Figur", notification_id=notification_id)
     loaded_entry_with_box.runtime_data.last_unknown_uid = "FFEE"
 
@@ -392,7 +392,7 @@ async def test_figure_with_other_uid_keeps_unknown_uid(hass, loaded_entry_with_b
 
 
 async def test_figure_created_without_runtime_data(hass):
-    entry = MockConfigEntry(domain=DOMAIN, title="Home Tonie", data={})
+    entry = MockConfigEntry(domain=DOMAIN, title="Lumibox", data={})
     entry.add_to_hass(hass)
     result = await _start(hass, entry, SUBENTRY_FIGURE)
     assert _suggested(result, CONF_UID) is None

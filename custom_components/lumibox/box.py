@@ -363,7 +363,7 @@ class BoxController:
         self._pending_off_uid = None
         self._removal_task = self._hass.async_create_task(
             self._removal_after_debounce(uid, self._tag_seq),
-            f"home_tonie Abnahme {self._config.name}",
+            f"lumibox Abnahme {self._config.name}",
         )
 
     async def _removal_after_debounce(self, uid: str | None, seq: int) -> None:
@@ -423,10 +423,10 @@ class BoxController:
         persistent_notification.async_create(
             self._hass,
             f"Neue Figur auf Box {self._config.name} erkannt (UID {uid}). "
-            "Unter Einstellungen → Home Tonie → Figur hinzufügen anlegen, "
+            "Unter Einstellungen → Lumibox → Figur hinzufügen anlegen, "
             "die UID ist vorausgefüllt.",
-            title="Home Tonie",
-            notification_id=f"home_tonie_unknown_{self._config.subentry_id}",
+            title="Lumibox",
+            notification_id=f"lumibox_unknown_{self._config.subentry_id}",
         )
         await self._led.show(LED_UNKNOWN)
         self._set(BoxState.IDLE, None)

@@ -10,8 +10,8 @@ from homeassistant.core import ServiceCall
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
 
-from custom_components.home_tonie.box import BoxConfig, BoxController
-from custom_components.home_tonie.const import (
+from custom_components.lumibox.box import BoxConfig, BoxController
+from custom_components.lumibox.const import (
     CONF_ESPHOME_DEVICE_ID,
     CONF_MA_USERNAME,
     CONF_MAX_VOLUME,
@@ -25,7 +25,7 @@ from custom_components.home_tonie.const import (
     SUBENTRY_BOX,
     SUBENTRY_FIGURE,
 )
-from custom_components.home_tonie.library import Figure, FigureLibrary
+from custom_components.lumibox.library import Figure, FigureLibrary
 
 from .fakes import FakeLed, FakePlayer
 
@@ -86,14 +86,14 @@ def _esphome_device(hass, mac: str, device_name: str, name: str) -> dr.DeviceEnt
 
 @pytest.fixture
 def esphome_device(hass) -> dr.DeviceEntry:
-    """ESPHome-Gerät „Home Tonie Anna“."""
-    return _esphome_device(hass, "aa:bb:cc:dd:ee:01", "home-tonie-anna", "Home Tonie Anna")
+    """ESPHome-Gerät „Lumibox Anna“."""
+    return _esphome_device(hass, "aa:bb:cc:dd:ee:01", "lumibox-anna", "Lumibox Anna")
 
 
 @pytest.fixture
 def other_device(hass) -> dr.DeviceEntry:
-    """Zweites ESPHome-Gerät „Home Tonie Ben“."""
-    return _esphome_device(hass, "aa:bb:cc:dd:ee:02", "home-tonie-ben", "Home Tonie Ben")
+    """Zweites ESPHome-Gerät „Lumibox Ben“."""
+    return _esphome_device(hass, "aa:bb:cc:dd:ee:02", "lumibox-ben", "Lumibox Ben")
 
 
 @pytest.fixture
@@ -106,7 +106,7 @@ def ma_player(hass) -> er.RegistryEntry:
 
 async def _load_entry(hass, subentries: list[ConfigSubentryData]) -> MockConfigEntry:
     entry = MockConfigEntry(
-        domain=DOMAIN, title="Home Tonie", data={}, subentries_data=subentries
+        domain=DOMAIN, title="Lumibox", data={}, subentries_data=subentries
     )
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
@@ -233,15 +233,15 @@ MEDIA_PLAYER_SERVICES = (
 @pytest.fixture
 async def two_boxes_entry(hass):
     """Boxen Anna (media_player.anna, anna) und Ben (media_player.ben, ben), Figuren Bobo und Feuerwehr."""
-    anna = _esphome_device(hass, "aa:bb:cc:dd:ee:11", "home-tonie-anna", "Home Tonie Anna")
-    ben = _esphome_device(hass, "aa:bb:cc:dd:ee:12", "home-tonie-ben", "Home Tonie Ben")
+    anna = _esphome_device(hass, "aa:bb:cc:dd:ee:11", "lumibox-anna", "Lumibox Anna")
+    ben = _esphome_device(hass, "aa:bb:cc:dd:ee:12", "lumibox-ben", "Lumibox Ben")
     hass.states.async_set("media_player.anna", "idle", {"volume_level": 0.3})
     hass.states.async_set("media_player.ben", "idle", {"volume_level": 0.3})
     play = async_mock_service(hass, "music_assistant", "play_media")
     media_player = {svc: async_mock_service(hass, "media_player", svc) for svc in MEDIA_PLAYER_SERVICES}
     led = {
-        "anna": async_mock_service(hass, "esphome", "home_tonie_anna_set_led"),
-        "ben": async_mock_service(hass, "esphome", "home_tonie_ben_set_led"),
+        "anna": async_mock_service(hass, "esphome", "lumibox_anna_set_led"),
+        "ben": async_mock_service(hass, "esphome", "lumibox_ben_set_led"),
     }
     entry = await _load_entry(
         hass,

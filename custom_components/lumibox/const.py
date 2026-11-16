@@ -1,7 +1,7 @@
-"""Konstanten der Home-Tonie-Integration."""
+"""Konstanten der Lumibox-Integration."""
 
-DOMAIN = "home_tonie"
-EVENT_TYPE = "esphome.home_tonie"
+DOMAIN = "lumibox"
+EVENT_TYPE = "esphome.lumibox"
 
 SUBENTRY_BOX = "box"
 SUBENTRY_FIGURE = "figure"
