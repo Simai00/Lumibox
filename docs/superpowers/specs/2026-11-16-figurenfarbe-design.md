@@ -8,7 +8,7 @@ An der Box soll man sehen, welche Figur gerade spielt. Jede Figur kann deshalb e
 ## Verhalten (mit dem Nutzer abgestimmt)
 - **Figur:** neues optionales Feld „Farbe“ (Farbwähler).
 - **Box:** neues Feld „Standardfarbe“, vorbelegt mit Lila (128, 0, 255). Eine Figur ohne eigene Farbe nutzt die Standardfarbe der Box, auf der sie liegt. Bestehende Figuren und Boxen funktionieren dadurch ohne Nacharbeit.
-- **LED-Modus `playing`:** Der ganze Ring leuchtet gedimmt (~25 %) in der Figurenfarbe. Ein hellerer Kopf (100 % der Farbe, innerhalb der Helligkeitsgrenze) mit kurzem Schweif von 3 LEDs dreht langsam im Kreis, etwa eine Runde in 3 s.
+- **LED-Modus `playing`:** Der ganze Ring leuchtet mit ~40 % in der Figurenfarbe. Ein hellerer Kopf (100 % der Farbe, innerhalb der Helligkeitsgrenze) mit kurzem Schweif von 3 LEDs dreht langsam im Kreis, etwa eine Runde in 3 s.
 - **`loading`:** bleibt der schnelle weisse Spinner, damit „lädt“ und „spielt“ unterscheidbar sind.
 - **`hold`:** bleibt neutral (statisch warmweiss, 10 %).
 - **`volume`:** Das Overlay kehrt danach zum Farb-Spinner mit derselben Farbe zurück.

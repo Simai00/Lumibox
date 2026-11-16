@@ -103,7 +103,7 @@ Pro Box gibt es eine eigene Datei in `esphome/` (`home-tonie-anna.yaml`, `home-t
 **LED (Entwicklerwerkzeuge, Aktionen, `esphome.home_tonie_anna_set_led` bzw. `esphome.home_tonie_ben_set_led`, Felder `mode`, `level`, `r`, `g`, `b`):**
 6. `off`: Ring aus (auch nach dem Booten).
 7. `loading`: weisser Spinner bis zum nächsten Modus.
-8. `playing` mit `r: 255, g: 0, b: 0`: Ring gedimmt rot, ein hellerer roter Punkt mit Schweif dreht etwa eine Runde in 3 s, dauerhaft. Danach `volume` mit `level: 50`: nach ca. 1,5 s wieder der rote Spinner.
+8. `playing` mit `r: 255, g: 0, b: 0`: Ring rot (ca. 40 %), ein hellerer roter Punkt mit Schweif dreht etwa eine Runde in 3 s, dauerhaft. Danach `volume` mit `level: 50`: nach ca. 1,5 s wieder der rote Spinner.
 9. `hold`: statisches, schwaches Warmweiss, dauerhaft.
 10. `paused`: blendet in ca. 1,5 s aus, dann aus.
 11. `unknown`: 3x rotes Blinken, dann aus.

@@ -204,7 +204,7 @@ light:
     restore_mode: ALWAYS_OFF
     default_transition_length: 0s
     effects:
-      # Farb-Spinner für "playing": Ring gedimmt in der Figurfarbe,
+      # Farb-Spinner für "playing": Ring ~40 % in der Figurfarbe,
       # heller Kopf mit Schweif, ca. eine Runde pro 3 s (24 x 125 ms)
       - addressable_lambda:
           name: "Farb-Spinner"
@@ -213,10 +213,10 @@ light:
             static int pos = 0;
             const int n = it.size();
             Color c(id(led_r), id(led_g), id(led_b));
-            it.all() = c * 64;
-            it[(pos + n - 3) % n] = c * 100;
-            it[(pos + n - 2) % n] = c * 150;
-            it[(pos + n - 1) % n] = c * 200;
+            it.all() = c * 100;
+            it[(pos + n - 3) % n] = c * 140;
+            it[(pos + n - 2) % n] = c * 180;
+            it[(pos + n - 1) % n] = c * 220;
             it[pos % n] = c;
             pos = (pos + 1) % n;
 

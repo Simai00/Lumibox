@@ -118,7 +118,7 @@ Die Box definiert unter `api: actions:` eine Action `set_led` mit den Variablen 
 | :--- | :--- | :--- |
 | `off` | aus | dauerhaft |
 | `loading` | Lade-Spinner (weiss) | bis zum nächsten Modus |
-| `playing` | Farb-Spinner: Ring ~25 % in der Figurfarbe (`r/g/b`), heller Kopf mit Schweif, ca. eine Runde in 3 s | dauerhaft |
+| `playing` | Farb-Spinner: Ring ~40 % in der Figurfarbe (`r/g/b`), heller Kopf mit Schweif, ca. eine Runde in 3 s | dauerhaft |
 | `hold` | statisch warmweiss, 10 % Helligkeit (Figur liegt, per Taster pausiert) | dauerhaft |
 | `paused` | kurz ausblenden, dann `off` | ~1,5 s |
 | `unknown` | 3× rot blinken, dann `off` | ~2 s |
