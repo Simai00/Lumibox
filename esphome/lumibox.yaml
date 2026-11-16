@@ -1,6 +1,12 @@
+substitutions:
+  version: "0.2.0"
+
 esphome:
   name: lumibox
   friendly_name: Lumibox
+  project:
+    name: "simai00.lumibox"
+    version: "${version}"
   comment: "ESP32 + PN532 (SPI), Encoder, Taster, LED-Ring"
   on_boot:
     priority: -100
