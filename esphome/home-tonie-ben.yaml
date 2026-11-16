@@ -1,6 +1,0 @@
-substitutions:
-  device_name: home-tonie-ben
-  friendly_name: Home Tonie Ben
-
-packages:
-  common: !include home-tonie-common.yaml

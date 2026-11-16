@@ -1,6 +1,0 @@
-substitutions:
-  device_name: home-tonie-anna
-  friendly_name: Home Tonie Anna
-
-packages:
-  common: !include home-tonie-common.yaml
