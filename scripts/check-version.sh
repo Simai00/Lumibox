@@ -8,6 +8,13 @@ manifest="$(manifest_version)"
 firmware="$(firmware_version)"
 status=0
 
+for entry in "$MANIFEST_FILE:$manifest" "$FIRMWARE_FILE:$firmware"; do
+  if ! [[ "${entry##*:}" =~ $VERSION_RE ]]; then
+    echo "Ungültige Version '${entry##*:}' in ${entry%:*} (erwartet X.Y.Z)." >&2
+    exit 1
+  fi
+done
+
 if [ "$manifest" != "$firmware" ]; then
   echo "Versionen stimmen nicht überein:" >&2
   echo "  $MANIFEST_FILE: $manifest" >&2

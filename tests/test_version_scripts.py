@@ -37,8 +37,13 @@ def _copies(tmp_path):
     return manifest, firmware
 
 
+def _current_version():
+    manifest = ROOT / "custom_components/lumibox/manifest.json"
+    return json.loads(manifest.read_text(encoding="utf-8"))["version"]
+
+
 def test_check_matching_tag():
-    assert _run(CHECK, ["v0.2.0"]).returncode == 0
+    assert _run(CHECK, [f"v{_current_version()}"]).returncode == 0
 
 
 def test_check_without_tag():
@@ -46,7 +51,8 @@ def test_check_without_tag():
 
 
 def test_check_wrong_tag():
-    result = _run(CHECK, ["v0.2.1"])
+    major, minor, patch = _current_version().split(".")
+    result = _run(CHECK, [f"v{major}.{minor}.{int(patch) + 1}"])
     assert result.returncode == 1
 
 
@@ -66,7 +72,9 @@ def test_bump(tmp_path):
     result = _run(BUMP, ["0.3.0"], (manifest, firmware))
     assert result.returncode == 0, result.stderr
     assert json.loads(manifest.read_text())["version"] == "0.3.0"
-    assert 'version: "0.3.0"' in firmware.read_text()
+    text = firmware.read_text()
+    assert 'version: "0.3.0"' in text
+    assert 'version: "${version}"' in text
     assert _run(CHECK, ["v0.3.0"], (manifest, firmware)).returncode == 0
 
 
@@ -76,3 +84,15 @@ def test_bump_rejects_invalid(tmp_path):
     for bad in ["1.2", "v1.2.3", "1.2.3-rc1", ""]:
         assert _run(BUMP, [bad], (manifest, firmware)).returncode == 1
     assert manifest.read_text() == before
+
+
+def test_check_rejects_invalid_versions(tmp_path):
+    for bad in ["", "abc"]:
+        manifest, firmware = _copies(tmp_path)
+        data = json.loads(manifest.read_text())
+        data["version"] = bad
+        manifest.write_text(json.dumps(data))
+        firmware.write_text(
+            firmware.read_text().replace('version: "0.2.0"', f'version: "{bad}"', 1)
+        )
+        assert _run(CHECK, [], (manifest, firmware)).returncode == 1
