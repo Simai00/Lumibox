@@ -1,6 +1,6 @@
 # Lumibox
 
-Eine quelloffene, physische Audio-Steuerbox auf Basis eines ESP32, ESPHome und Home Assistant. Audio-Box mit NFC-Figuren für kleine Kinder: Das Auflegen und Abheben von mit NFC-Tags versehenen 3D-Druck-Figuren die Musik- und Hörspielwiedergabe auf beliebigen vernetzten Smart Speakern.
+Eine quelloffene, physische Audio-Steuerbox auf Basis eines ESP32, ESPHome und Home Assistant. Audio-Box mit NFC-Figuren für kleine Kinder: Das Auflegen und Abheben von mit NFC-Tags versehenen 3D-Druck-Figuren steuert die Musik- und Hörspielwiedergabe auf beliebigen vernetzten Smart Speakern.
 
 ## Hardware
 
@@ -103,7 +103,7 @@ Die komplette Firmware einer Box steht in einer einzigen Datei: `esphome/lumibox
 4. Encoder drücken: `play_pause`. Taster GPIO26: `prev`, GPIO27: `next`. Ein Event pro Druck.
 5. `device_id` gehört zur richtigen Box (Anna bzw. Ben).
 
-**LED (Entwicklerwerkzeuge, Aktionen, `esphome.lumibox_xxxxxx_set_led` bzw. `esphome.lumibox_yyyyyy_set_led`, Felder `mode`, `level`, `r`, `g`, `b`):**
+**LED (Entwicklerwerkzeuge, Aktionen, `esphome.<gerätename>_set_led` (Bindestriche werden zu Unterstrichen, z. B. `esphome.lumibox_carla_set_led`), Felder `mode`, `level`, `r`, `g`, `b`):**
 6. `off`: Ring aus (auch nach dem Booten).
 7. `loading`: weisser Spinner bis zum nächsten Modus.
 8. `playing` mit `r: 255, g: 0, b: 0`: Ring rot (ca. 40 %), ein hellerer roter Punkt mit Schweif dreht etwa eine Runde in 3 s, dauerhaft. Danach `volume` mit `level: 50`: nach ca. 1,5 s wieder der rote Spinner.
