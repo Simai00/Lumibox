@@ -146,5 +146,23 @@
         "name": "Last unknown tag"
       }
     }
+  },
+  "issues": {
+    "firmware_outdated": {
+      "title": "The firmware of box {box} is too old",
+      "description": "Firmware of the box {box} is too old ({current}, {required} needed). Please update the firmware under Settings › Devices › {box}.",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Update the box firmware?",
+            "description": "The update is started and the box restarts when it is done. This can take a few minutes. Keep the box switched on and connected to Wi-Fi.",
+            "submit": "Update now"
+          }
+        },
+        "abort": {
+          "no_update": "There is no update available for this box right now. Check that the box is switched on and connected to Wi-Fi."
+        }
+      }
+    }
   }
 }

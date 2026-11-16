@@ -33,3 +33,7 @@ LED_PAUSED = "paused"
 LED_UNKNOWN = "unknown"
 LED_ERROR = "error"
 LED_VOLUME = "volume"
+
+# Mindestversion der Box-Firmware (ESPHome `project.version`). Wird erhöht, wenn die
+# Integration etwas von der Firmware braucht, das ältere Versionen nicht haben.
+MIN_FIRMWARE_VERSION = "0.2.0"

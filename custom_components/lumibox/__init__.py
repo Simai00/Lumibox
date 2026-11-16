@@ -27,6 +27,7 @@ from .const import (
     EVENT_TYPE,
     SUBENTRY_BOX,
 )
+from .firmware import async_setup_firmware_checks
 from .led import LedAdapter
 from .library import FigureLibrary, parse_rgb
 from .player import PlayerAdapter
@@ -92,6 +93,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: LumiboxConfigEntry) -> b
             on_unknown_tag=_on_unknown_tag,
         )
     entry.runtime_data = data
+    entry.async_on_unload(
+        async_setup_firmware_checks(hass, [c.config for c in data.controllers.values()])
+    )
 
     async def _dispatch(controller: BoxController, event_data: Mapping[str, Any]) -> None:
         try:
