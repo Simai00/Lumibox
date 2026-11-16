@@ -104,3 +104,28 @@ def test_figures_from_entry_filters_figure_subentries():
     assert FigureLibrary.figures_from_entry(entry) == [
         Figure("fig1", "Bobo", "04A1B2C3", "spotify:album:4aawyAB9vmqN3uQ7FjRGTy", "restart")
     ]
+
+
+def test_figures_from_entry_reads_color():
+    def fig(sub_id: str, uid: str, **extra) -> ConfigSubentryData:
+        return ConfigSubentryData(
+            subentry_type=SUBENTRY_FIGURE,
+            title=sub_id,
+            unique_id=None,
+            subentry_id=sub_id,
+            data={
+                "name": sub_id,
+                CONF_UID: uid,
+                CONF_MEDIA_URI: "spotify:album:4aawyAB9vmqN3uQ7FjRGTy",
+                CONF_MODE: "restart",
+                **extra,
+            },
+        )
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        subentries_data=[fig("rot", "04AA", color=[255, 0, 0]), fig("ohne", "04BB")],
+    )
+    figures = {f.subentry_id: f for f in FigureLibrary.figures_from_entry(entry)}
+    assert figures["rot"].color == (255, 0, 0)
+    assert figures["ohne"].color is None

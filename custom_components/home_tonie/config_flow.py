@@ -31,9 +31,13 @@ from homeassistant.helpers.selector import (
     SelectSelectorConfig,
     SelectSelectorMode,
     TextSelector,
+    ColorRGBSelector,
 )
 
 from .const import (
+    CONF_COLOR,
+    CONF_DEFAULT_COLOR,
+    DEFAULT_BOX_COLOR,
     CONF_ESPHOME_DEVICE_ID,
     CONF_MA_USERNAME,
     CONF_MAX_VOLUME,
@@ -74,6 +78,7 @@ BOX_SCHEMA = vol.Schema(
                 min=1, max=10, step=1, mode=NumberSelectorMode.SLIDER, unit_of_measurement="%"
             )
         ),
+        vol.Required(CONF_DEFAULT_COLOR, default=list(DEFAULT_BOX_COLOR)): ColorRGBSelector(),
     }
 )
 
@@ -87,6 +92,7 @@ FIGURE_SCHEMA = vol.Schema(
                 options=[MODE_RESTART], mode=SelectSelectorMode.DROPDOWN, translation_key=CONF_MODE
             )
         ),
+        vol.Optional(CONF_COLOR): ColorRGBSelector(),
     }
 )
 
@@ -223,6 +229,7 @@ class BoxSubentryFlow(_HomeTonieSubentryFlow):
             CONF_MA_USERNAME: str(user_input[CONF_MA_USERNAME]).strip(),
             CONF_MAX_VOLUME: int(user_input[CONF_MAX_VOLUME]),
             CONF_VOLUME_STEP: int(user_input[CONF_VOLUME_STEP]),
+            CONF_DEFAULT_COLOR: _rgb(user_input.get(CONF_DEFAULT_COLOR)) or list(DEFAULT_BOX_COLOR),
         }
 
 
@@ -261,15 +268,15 @@ class FigureSubentryFlow(_HomeTonieSubentryFlow):
                 errors[CONF_MEDIA_URI] = "invalid_media_uri"
             if not errors:
                 self._forget_unknown_uid(uid)
-                return self._finish(
-                    name,
-                    {
-                        CONF_NAME: name,
-                        CONF_UID: uid,
-                        CONF_MEDIA_URI: media_uri,
-                        CONF_MODE: user_input[CONF_MODE],
-                    },
-                )
+                data: dict[str, Any] = {
+                    CONF_NAME: name,
+                    CONF_UID: uid,
+                    CONF_MEDIA_URI: media_uri,
+                    CONF_MODE: user_input[CONF_MODE],
+                }
+                if (color := _rgb(user_input.get(CONF_COLOR))) is not None:
+                    data[CONF_COLOR] = color
+                return self._finish(name, data)
 
         if user_input is not None:
             suggested: dict[str, Any] = user_input
@@ -317,3 +324,10 @@ def _device_name(hass: HomeAssistant, device_id: str) -> str:
     if device is None:
         return "Home Tonie"
     return device.name_by_user or device.name or "Home Tonie"
+
+
+def _rgb(value: Any) -> list[int] | None:
+    """Farbwähler-Wert als [r, g, b] (0–255); leer oder ungültig: None."""
+    if isinstance(value, (list, tuple)) and len(value) == 3:
+        return [max(0, min(255, int(v))) for v in value]
+    return None

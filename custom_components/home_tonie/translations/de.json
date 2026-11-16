@@ -27,7 +27,8 @@
             "player_entity_id": "Lautsprecher",
             "ma_username": "Music-Assistant-Benutzer",
             "max_volume": "Maximale Lautstärke",
-            "volume_step": "Lautstärke-Schritt"
+            "volume_step": "Lautstärke-Schritt",
+            "default_color": "Standardfarbe"
           },
           "data_description": {
             "name": "Zum Beispiel der Name des Kindes. Leer lassen, um den Gerätenamen zu verwenden.",
@@ -35,7 +36,8 @@
             "player_entity_id": "Music-Assistant-Player, auf dem die Box spielt.",
             "ma_username": "Music-Assistant-Benutzer des Kindes (z. B. anna). Sein Anbieterfilter bestimmt, welcher Spotify-Account verwendet wird.",
             "max_volume": "Obergrenze für Lautstärkeänderungen durch die Box, in Prozent.",
-            "volume_step": "Lautstärkeänderung pro Encoder-Raste, in Prozent."
+            "volume_step": "Lautstärkeänderung pro Encoder-Raste, in Prozent.",
+            "default_color": "LED-Farbe für Figuren ohne eigene Farbe."
           }
         },
         "reconfigure": {
@@ -47,7 +49,8 @@
             "player_entity_id": "Lautsprecher",
             "ma_username": "Music-Assistant-Benutzer",
             "max_volume": "Maximale Lautstärke",
-            "volume_step": "Lautstärke-Schritt"
+            "volume_step": "Lautstärke-Schritt",
+            "default_color": "Standardfarbe"
           },
           "data_description": {
             "name": "Zum Beispiel der Name des Kindes. Leer lassen, um den Gerätenamen zu verwenden.",
@@ -55,7 +58,8 @@
             "player_entity_id": "Music-Assistant-Player, auf dem die Box spielt.",
             "ma_username": "Music-Assistant-Benutzer des Kindes (z. B. anna). Sein Anbieterfilter bestimmt, welcher Spotify-Account verwendet wird.",
             "max_volume": "Obergrenze für Lautstärkeänderungen durch die Box, in Prozent.",
-            "volume_step": "Lautstärkeänderung pro Encoder-Raste, in Prozent."
+            "volume_step": "Lautstärkeänderung pro Encoder-Raste, in Prozent.",
+            "default_color": "LED-Farbe für Figuren ohne eigene Farbe."
           }
         },
         "confirm_shared_user": {
@@ -86,13 +90,15 @@
             "name": "Name",
             "uid": "Tag-UID",
             "media_uri": "Spotify-Link",
-            "mode": "Modus"
+            "mode": "Modus",
+            "color": "Farbe"
           },
           "data_description": {
             "name": "Zum Beispiel „Bobo Siebenschläfer“.",
             "uid": "UID des NFC-Tags, z. B. 04A1B2C3. Trennzeichen werden entfernt. Vorbelegt mit dem zuletzt erkannten unbekannten Tag.",
             "media_uri": "Spotify-Link (open.spotify.com/…) oder URI (spotify:album:…).",
-            "mode": "Was passiert, wenn die Figur aufgelegt wird."
+            "mode": "Was passiert, wenn die Figur aufgelegt wird.",
+            "color": "Farbe des LED-Rings, während diese Figur spielt. Leer lassen für die Standardfarbe der Box."
           }
         },
         "reconfigure": {
@@ -102,13 +108,15 @@
             "name": "Name",
             "uid": "Tag-UID",
             "media_uri": "Spotify-Link",
-            "mode": "Modus"
+            "mode": "Modus",
+            "color": "Farbe"
           },
           "data_description": {
             "name": "Zum Beispiel „Bobo Siebenschläfer“.",
             "uid": "UID des NFC-Tags, z. B. 04A1B2C3. Trennzeichen werden entfernt. Vorbelegt mit dem zuletzt erkannten unbekannten Tag.",
             "media_uri": "Spotify-Link (open.spotify.com/…) oder URI (spotify:album:…).",
-            "mode": "Was passiert, wenn die Figur aufgelegt wird."
+            "mode": "Was passiert, wenn die Figur aufgelegt wird.",
+            "color": "Farbe des LED-Rings, während diese Figur spielt. Leer lassen für die Standardfarbe der Box."
           }
         }
       },

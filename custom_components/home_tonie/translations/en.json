@@ -27,7 +27,8 @@
             "player_entity_id": "Speaker",
             "ma_username": "Music Assistant user",
             "max_volume": "Maximum volume",
-            "volume_step": "Volume step"
+            "volume_step": "Volume step",
+            "default_color": "Default color"
           },
           "data_description": {
             "name": "For example the child's name. Leave empty to use the device name.",
@@ -35,7 +36,8 @@
             "player_entity_id": "Music Assistant player the box plays on.",
             "ma_username": "Music Assistant user of the child (for example anna). Their provider filter decides which Spotify account is used.",
             "max_volume": "Upper limit for volume changes from the box, in percent.",
-            "volume_step": "Volume change per encoder detent, in percent."
+            "volume_step": "Volume change per encoder detent, in percent.",
+            "default_color": "LED color for figures without their own color."
           }
         },
         "reconfigure": {
@@ -47,7 +49,8 @@
             "player_entity_id": "Speaker",
             "ma_username": "Music Assistant user",
             "max_volume": "Maximum volume",
-            "volume_step": "Volume step"
+            "volume_step": "Volume step",
+            "default_color": "Default color"
           },
           "data_description": {
             "name": "For example the child's name. Leave empty to use the device name.",
@@ -55,7 +58,8 @@
             "player_entity_id": "Music Assistant player the box plays on.",
             "ma_username": "Music Assistant user of the child (for example anna). Their provider filter decides which Spotify account is used.",
             "max_volume": "Upper limit for volume changes from the box, in percent.",
-            "volume_step": "Volume change per encoder detent, in percent."
+            "volume_step": "Volume change per encoder detent, in percent.",
+            "default_color": "LED color for figures without their own color."
           }
         },
         "confirm_shared_user": {
@@ -86,13 +90,15 @@
             "name": "Name",
             "uid": "Tag UID",
             "media_uri": "Spotify link",
-            "mode": "Mode"
+            "mode": "Mode",
+            "color": "Color"
           },
           "data_description": {
             "name": "For example \"Bobo Siebenschläfer\".",
             "uid": "UID of the NFC tag, e.g. 04A1B2C3. Separators are removed. Pre-filled with the last unknown tag.",
             "media_uri": "Spotify link (open.spotify.com/...) or URI (spotify:album:...).",
-            "mode": "What happens when the figure is placed on the box."
+            "mode": "What happens when the figure is placed on the box.",
+            "color": "LED ring color while this figure plays. Leave empty to use the box's default color."
           }
         },
         "reconfigure": {
@@ -102,13 +108,15 @@
             "name": "Name",
             "uid": "Tag UID",
             "media_uri": "Spotify link",
-            "mode": "Mode"
+            "mode": "Mode",
+            "color": "Color"
           },
           "data_description": {
             "name": "For example \"Bobo Siebenschläfer\".",
             "uid": "UID of the NFC tag, e.g. 04A1B2C3. Separators are removed. Pre-filled with the last unknown tag.",
             "media_uri": "Spotify link (open.spotify.com/...) or URI (spotify:album:...).",
-            "mode": "What happens when the figure is placed on the box."
+            "mode": "What happens when the figure is placed on the box.",
+            "color": "LED ring color while this figure plays. Leave empty to use the box's default color."
           }
         }
       },

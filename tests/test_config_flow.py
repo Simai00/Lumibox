@@ -11,6 +11,8 @@ from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.home_tonie.const import (
+    CONF_COLOR,
+    CONF_DEFAULT_COLOR,
     CONF_ESPHOME_DEVICE_ID,
     CONF_MA_USERNAME,
     CONF_MAX_VOLUME,
@@ -82,6 +84,7 @@ async def test_add_box(hass, loaded_entry, esphome_device, ma_player):
         CONF_MA_USERNAME: "anna",
         CONF_MAX_VOLUME: 40,
         CONF_VOLUME_STEP: 3,
+        CONF_DEFAULT_COLOR: [128, 0, 255],
     }
     assert type(box.data[CONF_MAX_VOLUME]) is int
     assert type(box.data[CONF_VOLUME_STEP]) is int
@@ -400,3 +403,95 @@ async def test_figure_created_without_runtime_data(hass):
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert len(_subentries(entry, SUBENTRY_FIGURE)) == 1
+
+
+async def test_add_figure_with_color(hass, loaded_entry):
+    result = await _start(hass, loaded_entry, SUBENTRY_FIGURE)
+    result = await _configure(
+        hass,
+        result,
+        {
+            "name": "Bobo",
+            CONF_UID: "04A1B2C3",
+            CONF_MEDIA_URI: LINK,
+            CONF_MODE: "restart",
+            CONF_COLOR: [0, 128, 255],
+        },
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    (fig,) = _subentries(loaded_entry, SUBENTRY_FIGURE)
+    assert fig.data[CONF_COLOR] == [0, 128, 255]
+
+
+async def test_add_figure_without_color(hass, loaded_entry):
+    result = await _start(hass, loaded_entry, SUBENTRY_FIGURE)
+    result = await _configure(
+        hass,
+        result,
+        {"name": "Bobo", CONF_UID: "04A1B2C3", CONF_MEDIA_URI: LINK, CONF_MODE: "restart"},
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    (fig,) = _subentries(loaded_entry, SUBENTRY_FIGURE)
+    assert CONF_COLOR not in fig.data
+
+
+async def test_reconfigure_figure_clear_color(hass, loaded_entry):
+    result = await _start(hass, loaded_entry, SUBENTRY_FIGURE)
+    await _configure(
+        hass,
+        result,
+        {
+            "name": "Bobo",
+            CONF_UID: "04A1B2C3",
+            CONF_MEDIA_URI: LINK,
+            CONF_MODE: "restart",
+            CONF_COLOR: [255, 0, 0],
+        },
+    )
+    (fig,) = _subentries(loaded_entry, SUBENTRY_FIGURE)
+    result = await _start(
+        hass, loaded_entry, SUBENTRY_FIGURE, SOURCE_RECONFIGURE, fig.subentry_id
+    )
+    assert _suggested(result, CONF_COLOR) == [255, 0, 0]
+    result = await _configure(
+        hass,
+        result,
+        {"name": "Bobo", CONF_UID: "04A1B2C3", CONF_MEDIA_URI: LINK, CONF_MODE: "restart"},
+    )
+    assert result["reason"] == "reconfigure_successful"
+    assert CONF_COLOR not in loaded_entry.subentries[fig.subentry_id].data
+
+
+async def test_add_box_default_color(hass, loaded_entry, esphome_device, ma_player):
+    result = await _start(hass, loaded_entry, SUBENTRY_BOX)
+    result = await _configure(
+        hass,
+        result,
+        {
+            CONF_ESPHOME_DEVICE_ID: esphome_device.id,
+            CONF_PLAYER_ENTITY_ID: ma_player.entity_id,
+            CONF_MA_USERNAME: "anna",
+            CONF_MAX_VOLUME: 40.0,
+            CONF_VOLUME_STEP: 3.0,
+        },
+    )
+    (box,) = _subentries(loaded_entry, SUBENTRY_BOX)
+    assert box.data[CONF_DEFAULT_COLOR] == [128, 0, 255]
+
+
+async def test_add_box_custom_color(hass, loaded_entry, esphome_device, ma_player):
+    result = await _start(hass, loaded_entry, SUBENTRY_BOX)
+    result = await _configure(
+        hass,
+        result,
+        {
+            CONF_ESPHOME_DEVICE_ID: esphome_device.id,
+            CONF_PLAYER_ENTITY_ID: ma_player.entity_id,
+            CONF_MA_USERNAME: "anna",
+            CONF_MAX_VOLUME: 40.0,
+            CONF_VOLUME_STEP: 3.0,
+            CONF_DEFAULT_COLOR: [0, 255, 0],
+        },
+    )
+    (box,) = _subentries(loaded_entry, SUBENTRY_BOX)
+    assert box.data[CONF_DEFAULT_COLOR] == [0, 255, 0]

@@ -8,7 +8,7 @@ import re
 
 from homeassistant.config_entries import ConfigEntry
 
-from .const import CONF_MEDIA_URI, CONF_MODE, CONF_UID, SUBENTRY_FIGURE
+from .const import CONF_COLOR, CONF_MEDIA_URI, CONF_MODE, CONF_UID, SUBENTRY_FIGURE
 
 _SPOTIFY_TYPES = "album|playlist|track|artist|show|episode|audiobook"
 _SPOTIFY_RE = re.compile(
@@ -53,6 +53,7 @@ class Figure:
     uid: str
     media_uri: str
     mode: str
+    color: tuple[int, int, int] | None = None
 
 
 class FigureLibrary:
@@ -81,7 +82,15 @@ class FigureLibrary:
                 uid=sub.data[CONF_UID],
                 media_uri=sub.data[CONF_MEDIA_URI],
                 mode=sub.data[CONF_MODE],
+                color=_color(sub.data.get(CONF_COLOR)),
             )
             for sub in entry.subentries.values()
             if sub.subentry_type == SUBENTRY_FIGURE
         ]
+
+
+def _color(value: object) -> tuple[int, int, int] | None:
+    """Gespeicherte Farbe [r, g, b] als Tupel; fehlt sie oder ist ungültig: None."""
+    if isinstance(value, (list, tuple)) and len(value) == 3:
+        return (int(value[0]), int(value[1]), int(value[2]))
+    return None
