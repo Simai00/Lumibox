@@ -56,9 +56,12 @@ spi:
 pn532_spi:
   id: nfc_reader
   cs_pin: GPIO16
-  update_interval: 250ms
+  update_interval: 500ms
   on_tag:
     then:
+      - logger.log:
+          format: "Tag erkannt: %s"
+          args: ['x.c_str()']
       - homeassistant.event:
           event: esphome.home_tonie
           data:
@@ -66,6 +69,9 @@ pn532_spi:
             uid: !lambda 'return x;'
   on_tag_removed:
     then:
+      - logger.log:
+          format: "Tag entfernt: %s"
+          args: ['x.c_str()']
       - homeassistant.event:
           event: esphome.home_tonie
           data:
@@ -176,7 +182,7 @@ light:
     pin: GPIO21
     num_leds: 24
     chipset: WS2812
-    rgb_order: GRB
+    channel_colors: GRB
     # Harte Helligkeitsobergrenze (Strom, Blendung), gilt für alle Effekte.
     color_correct: [50%, 50%, 50%]
     restore_mode: ALWAYS_OFF

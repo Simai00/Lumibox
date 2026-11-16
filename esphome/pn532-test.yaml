@@ -1,0 +1,58 @@
+# Testprogramm: nur ESP32 + PN532 (SPI). Kein WLAN, kein Home Assistant.
+# - Beim Start blinkt die LED auf dem ESP32-Board (GPIO2) 3x: LED funktioniert.
+# - Danach leuchtet sie, solange der PN532 einen Tag erkennt.
+# - Im USB-Log steht pro Tag, wie lange er erkannt war ("Tag weg nach x.x s").
+# Flashen per USB-Kabel. Danach die normale Box-Firmware wieder per USB flashen.
+
+esphome:
+  name: pn532-test
+  on_boot:
+    priority: -100
+    then:
+      - repeat:
+          count: 3
+          then:
+            - output.turn_on: board_led
+            - delay: 150ms
+            - output.turn_off: board_led
+            - delay: 150ms
+      - logger.log: "PN532-Test bereit: Tag auflegen"
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+  level: INFO
+
+globals:
+  - id: tag_since
+    type: uint32_t
+    initial_value: "0"
+
+output:
+  - platform: gpio
+    id: board_led
+    pin: GPIO2
+
+spi:
+  clk_pin: GPIO18
+  miso_pin: GPIO19
+  mosi_pin: GPIO23
+
+pn532_spi:
+  cs_pin: GPIO16
+  update_interval: 500ms
+  on_tag:
+    then:
+      - output.turn_on: board_led
+      - lambda: |-
+          id(tag_since) = millis();
+          ESP_LOGI("test", "Tag erkannt: %s", x.c_str());
+  on_tag_removed:
+    then:
+      - output.turn_off: board_led
+      - lambda: |-
+          ESP_LOGI("test", "Tag weg nach %.1f s: %s",
+                   (millis() - id(tag_since)) / 1000.0f, x.c_str());

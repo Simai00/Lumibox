@@ -9,3 +9,9 @@ __pycache__/
 
 # Superpowers SDD-Arbeitsverzeichnis
 .superpowers/
+
+# MCPs
+.mcp.json
+
+# Lokale Docker-Testumgebung
+dev/
