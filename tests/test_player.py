@@ -28,6 +28,23 @@ async def test_play_calls_music_assistant_with_username(hass):
     }
 
 
+async def test_play_with_start_item(hass):
+    calls = async_mock_service(hass, "music_assistant", "play_media")
+    hass.states.async_set(ENTITY, "idle")
+    await _adapter(hass).play(
+        "spotify:album:4aawyAB9vmqN3uQ7FjRGTy", start_item="spotify://track/abc"
+    )
+    assert len(calls) == 1
+    assert calls[0].data == {
+        "entity_id": ENTITY,
+        "media_id": "spotify://album/4aawyAB9vmqN3uQ7FjRGTy",
+        "media_type": "album",
+        "enqueue": "replace",
+        "username": "anna",
+        "start_item": "spotify://track/abc",
+    }
+
+
 @pytest.mark.parametrize("method,service", [
     ("resume", "media_play"),
     ("pause", "media_pause"),

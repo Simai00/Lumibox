@@ -49,21 +49,21 @@ class PlayerAdapter:
         volume = state.attributes.get("volume_level")
         return None if volume is None else float(volume)
 
-    async def play(self, media_uri: str) -> None:
+    async def play(self, media_uri: str, start_item: str | None = None) -> None:
+        """Figur abspielen; mit ``start_item`` ab diesem Titel (URI/ID laut MA)."""
         try:
             media_id, media_type = to_ma_media(media_uri)
         except InvalidMediaUri as err:
             raise PlayerError(f"Ungültige Medien-URI: {media_uri!r}") from err
-        await self._call(
-            "music_assistant",
-            "play_media",
-            {
-                "media_id": media_id,
-                "media_type": media_type,
-                "enqueue": "replace",
-                "username": self._ma_username,
-            },
-        )
+        data: dict[str, Any] = {
+            "media_id": media_id,
+            "media_type": media_type,
+            "enqueue": "replace",
+            "username": self._ma_username,
+        }
+        if start_item is not None:
+            data["start_item"] = start_item
+        await self._call("music_assistant", "play_media", data)
 
     async def resume(self) -> None:
         await self._call("media_player", "media_play")

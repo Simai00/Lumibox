@@ -24,6 +24,8 @@ class FakePlayer:
         self.calls: list[tuple] = []
         # Ist ein Event gesetzt, wartet pause() darauf (simuliert einen langsamen Service-Aufruf).
         self.pause_gate: asyncio.Event | None = None
+        # Ist das Flag gesetzt, schlägt play() mit start_item fehl (Rückfall testen).
+        self.fail_start_item = False
 
     def is_available(self) -> bool:
         return self.available
@@ -40,9 +42,14 @@ class FakePlayer:
         if not self.available:
             raise PlayerError("FakePlayer nicht verfügbar")
 
-    async def play(self, media_uri: str) -> None:
+    async def play(self, media_uri: str, start_item: str | None = None) -> None:
         self._check()
-        self.calls.append(("play", media_uri))
+        if start_item is None:
+            self.calls.append(("play", media_uri))
+        else:
+            if self.fail_start_item:
+                raise PlayerError("start_item nicht gefunden")
+            self.calls.append(("play", media_uri, start_item))
         self.state = "playing"
         self.media_content_id = media_uri
 

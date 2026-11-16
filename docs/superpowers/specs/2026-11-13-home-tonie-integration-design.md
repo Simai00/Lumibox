@@ -187,7 +187,7 @@ Ein ESPHome-Gerät darf nur einer Box zugeordnet sein (Validierung im Flow). Zwe
 | :--- | :--- | :--- |
 | `const.py` | Domain, Event-Name, Defaults | – |
 | `library.py` | Figurenbibliothek: `lookup(uid) -> Figure \| None`, Normalisierung von UID und URI (reine Funktionen) | Config Entry |
-| `player.py` | `PlayerAdapter`: `play(uri)`, `resume()`, `pause()`, `next()`, `prev()`, `get_volume()`, `set_volume(v)`, `snapshot()` (aktueller `media_content_id` + Zustand) | `hass.services`, `hass.states` |
+| `player.py` | `PlayerAdapter`: `play(uri, start_item=None)`, `resume()`, `pause()`, `next()`, `prev()`, `get_volume()`, `set_volume(v)`, `snapshot()` (aktueller `media_content_id` + Zustand) | `hass.services`, `hass.states` |
 | `led.py` | `LedAdapter`: `show(mode, level=0)` → ruft `esphome.<node>_set_led` auf; ermittelt `<node>` aus dem Device Registry | `hass.services` |
 | `box.py` | `BoxController` pro Box: Zustandsautomat aus Abschnitt 6 | Library, Player-/LedAdapter (injiziert) |
 | `sensor.py` | Pro Box: `sensor.<box>_aktuelle_figur`, `sensor.<box>_letzter_unbekannter_tag` | BoxController (Listener) |
@@ -205,8 +205,8 @@ Ein ESPHome-Gerät darf nur einer Box zugeordnet sein (Validierung im Flow). Zwe
   - **`username = ma_username` der Box**.
 
   Music Assistant wählt über die Anbieterfilter dieses Benutzers den richtigen Spotify-Account. Die Figur bleibt neutral und spielt auf jeder Box über den Account des jeweiligen Kindes. Nebeneffekt: Jedes Kind hat ein eigenes Wiedergabeprotokoll in Music Assistant.
-- **Später (Fortsetzen):** `play_media` kennt `start_item` (Start bei einem bestimmten Titel bzw. einer bestimmten Folge). Das ist die Grundlage für `mode = resume`.
-- **Weiterspielen:** `media_player.media_play`.
+- **Weiterspielen:** ebenfalls `music_assistant.play_media` wie beim Start, zusätzlich mit `start_item` = gemerkter `media_content_id` (Titel bzw. Folge, bei der pausiert wurde). Es wird am Anfang dieses Titels fortgesetzt, ohne Sprung an die genaue Position. `media_player.media_play` wird nicht verwendet: Mit Music Assistant und Sonos spielt es nach `media_pause` nicht zuverlässig weiter, und Music Assistant setzt einen pausierten Player nach etwa 10–15 s auf `idle`. Scheitert der Aufruf mit `start_item`, wird die Figur einmal ohne `start_item` von vorn gestartet.
+- **Später (Fortsetzen über Sessions):** `mode = resume` kann auf demselben `start_item` aufbauen.
 - **Pause:** `media_player.media_pause`.
 - **Titel:** `media_player.media_next_track` / `media_previous_track`.
 - **Lautstärke:** `media_player.volume_set` mit einem berechneten Wert. Kein `volume_up`, denn dessen Schrittweite hängt vom Gerät ab.
@@ -217,7 +217,7 @@ Ein ESPHome-Gerät darf nur einer Box zugeordnet sein (Validierung im Flow). Zwe
 
 `idle` (keine Figur) · `loading` · `playing` · `paused_by_box` (Figur liegt, per Taster pausiert) · `removed` (Figur abgenommen, Pause durch Box)
 
-Gemerkt pro Box: `current_figure`, `last_figure`, `snapshot_at_removal` (`media_content_id` des Players beim Abnehmen).
+Gemerkt pro Box: `current_figure`, `last_figure`, `snapshot_at_removal` (`media_content_id` des Players bei der Pause durch die Box) und `paused_at` (Zeitpunkt dieser Pause).
 
 ### 6.2 Ereignisse
 
@@ -230,22 +230,22 @@ Gemerkt pro Box: `current_figure`, `last_figure`, `snapshot_at_removal` (`media_
 3. Für eine bekannte Figur F wird `current_figure = F` gesetzt und der Sensor aktualisiert.
 4. **Weiterspielen** statt Neustart, wenn alle drei Bedingungen gelten:
    - `F == last_figure`,
-   - der Player ist `paused`,
-   - sein `media_content_id` entspricht `snapshot_at_removal`.
+   - `snapshot_at_removal` ist gesetzt,
+   - die Pause liegt höchstens 30 Minuten zurück (`RESUME_MAX_AGE_S`).
 
-   Dann: Lautstärke begrenzen, `resume()`, LED `playing`.
+   Dann: LED `loading`, Lautstärke begrenzen, `play(F.media_uri, start_item=snapshot_at_removal)`, danach LED `playing`. Scheitert das, einmal `play(F.media_uri)` ohne `start_item`. Der Zustand des Players (`paused`, `media_content_id`) wird nicht mehr geprüft, weil Music Assistant pausierte Player nach kurzer Zeit auf `idle` setzt.
 5. **Sonst:** LED `loading`, Lautstärke auf höchstens `max_volume` setzen, `play(F.media_uri)`, danach LED `playing`.
 6. Schlägt der Service-Aufruf fehl oder ist der Player `unavailable`: LED `error`, Log-Warnung, Zustand `idle`.
 
 **`tag_off(uid)`**
 1. Die Integration startet eine **Entprellung von 1,0 s**, weil der PN532 kurze Aussetzer melden kann. Kommt in dieser Zeit `tag_on` mit derselben UID, wird alles ignoriert.
 2. Nach Ablauf:
-   - `pause()` und `snapshot_at_removal` merken;
+   - `pause()`, `snapshot_at_removal` und `paused_at` merken (nach einer Pause per Taster bleibt der damals gemerkte Titel);
    - `last_figure = current_figure`, danach `current_figure = None`;
    - LED `paused`, was automatisch zu `off` führt.
 3. Ist die UID unbekannt oder lief nichts, wird nur LED `off` gesetzt.
 
-**`play_pause`** (nur wenn eine Figur liegt): In `playing` folgt `pause()`, LED `hold` und Zustand `paused_by_box`. In `paused_by_box` folgt `resume()` (mit Lautstärke-Begrenzung), LED `playing` und Zustand `playing`. Die LED bleibt bei liegender Figur also nie ganz dunkel.
+**`play_pause`** (nur wenn eine Figur liegt): In `playing` folgt `pause()` (Titel und Zeitpunkt merken), LED `hold` und Zustand `paused_by_box`. In `paused_by_box` folgt `play(F.media_uri, start_item=gemerkter Titel)` mit demselben Rückfall wie in `tag_on` Schritt 4 (mit Lautstärke-Begrenzung, ohne 30-Minuten-Grenze, da die Figur liegen blieb), LED `playing` und Zustand `playing`. Die LED bleibt bei liegender Figur also nie ganz dunkel.
 
 **`next` / `prev`** (nur wenn eine Figur liegt): `next()` / `prev()`.
 
@@ -279,8 +279,9 @@ Liegt keine Figur auf, werden Taster und Encoder ignoriert.
   - bekannte Figur → `play` + Lautstärke begrenzt + LED `loading` → `playing`;
   - Abnehmen → nach 1 s `pause`, LED `paused`;
   - Abnehmen + Auflegen innerhalb 1 s → keine Aktion;
-  - gleiche Figur wieder → `resume` statt `play`;
-  - gleiche Figur, aber Player spielt inzwischen etwas anderes → `play`;
+  - gleiche Figur wieder innerhalb 30 min → `play` mit `start_item` (auch wenn der Player inzwischen `idle` ist);
+  - gleiche Figur nach mehr als 30 min → `play` ohne `start_item`;
+  - `start_item` scheitert → einmal `play` ohne `start_item`;
   - andere Figur → `play`;
   - unbekannte Figur → Sensor, Benachrichtigung, LED `unknown`, kein `play`;
   - Encoder → Lautstärke nie > `max_volume`, nie < 0;

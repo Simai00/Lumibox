@@ -7,8 +7,13 @@ import asyncio
 from custom_components.home_tonie.box import BoxState
 
 
+BOBO_URI = "spotify:album:4aawyAB9vmqN3uQ7FjRGTy"
+TRACK = "spotify://track/3n3Ppam7vgaVa1iaRUc9Lp"
+
+
 async def _playing(box):
     await box.ctrl.tag_on("04A1B2C3")
+    box.player.media_content_id = TRACK
     box.player.calls.clear()
     box.led.shows.clear()
 
@@ -49,9 +54,21 @@ async def test_play_pause_toggles(hass, box):
 
     box.player.calls.clear()
     box.led.shows.clear()
+    box.player.state = "idle"  # MA lässt pausierte Player nach kurzer Zeit auf idle fallen
+    box.player.media_content_id = None
     await box.ctrl.play_pause()
-    assert box.player.calls == [("resume",)]
+    assert box.player.calls == [("play", BOBO_URI, TRACK)]
     assert box.led.shows == [("playing", 0)]
+    assert box.ctrl.state is BoxState.PLAYING
+
+
+async def test_play_pause_resume_falls_back_to_restart(hass, box):
+    await _playing(box)
+    await box.ctrl.play_pause()
+    box.player.calls.clear()
+    box.player.fail_start_item = True
+    await box.ctrl.play_pause()
+    assert box.player.calls == [("play", BOBO_URI)]
     assert box.ctrl.state is BoxState.PLAYING
 
 
@@ -61,7 +78,7 @@ async def test_resume_from_pause_caps_volume(hass, box):
     box.player.calls.clear()
     box.player.volume = 0.9
     await box.ctrl.play_pause()
-    assert box.player.calls == [("set_volume", 0.4), ("resume",)]
+    assert box.player.calls == [("set_volume", 0.4), ("play", BOBO_URI, TRACK)]
 
 
 async def test_play_pause_player_error(hass, box):

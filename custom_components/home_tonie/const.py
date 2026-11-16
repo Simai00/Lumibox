@@ -19,6 +19,8 @@ DEFAULT_MAX_VOLUME = 40
 DEFAULT_VOLUME_STEP = 3
 MODE_RESTART = "restart"
 REMOVAL_DEBOUNCE_S = 1.0
+# Nur so lange nach der Pause wird beim gemerkten Titel fortgesetzt.
+RESUME_MAX_AGE_S = 1800
 
 LED_OFF = "off"
 LED_LOADING = "loading"

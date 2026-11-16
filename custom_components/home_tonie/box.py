@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 from homeassistant.components import persistent_notification
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers.event import async_call_later
+from homeassistant.util import dt as dt_util
 
 from .const import (
     LED_ERROR,
@@ -24,6 +25,7 @@ from .const import (
     LED_UNKNOWN,
     LED_VOLUME,
     REMOVAL_DEBOUNCE_S,
+    RESUME_MAX_AGE_S,
 )
 from .library import Figure, FigureLibrary, normalize_uid
 from .player import PlayerError
@@ -33,7 +35,6 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-STATE_PAUSED = "paused"
 STATE_PLAYING = "playing"
 
 
@@ -43,8 +44,7 @@ class Player(Protocol):
     def is_available(self) -> bool: ...
     def snapshot(self) -> PlayerSnapshot: ...
     def get_volume(self) -> float | None: ...
-    async def play(self, media_uri: str) -> None: ...
-    async def resume(self) -> None: ...
+    async def play(self, media_uri: str, start_item: str | None = None) -> None: ...
     async def pause(self) -> None: ...
     async def next_track(self) -> None: ...
     async def previous_track(self) -> None: ...
@@ -103,7 +103,9 @@ class BoxController:
         self._state = BoxState.IDLE
         self._current_figure: Figure | None = None
         self._last_figure: Figure | None = None
+        # media_content_id (aktueller Titel) und Zeitpunkt der letzten Pause durch die Box.
         self._snapshot_at_removal: str | None = None
+        self._paused_at: datetime | None = None
         self._last_unknown_uid: str | None = None
 
         self._pending_off_uid: str | None = None
@@ -190,9 +192,17 @@ class BoxController:
         if not norm:
             _LOGGER.debug("tag_on ohne gültige UID (%r) ignoriert", uid)
             return
+        _LOGGER.debug("Box %s: tag_on %s empfangen", self._config.name, norm)
         async with self._lock:
             # Eine bereits ausgelöste, aber noch wartende Abnahme ist damit überholt.
             self._tag_seq += 1
+            _LOGGER.debug(
+                "Box %s: tag_on %s verarbeitet (Zustand %s, Abnahme wartend: %s)",
+                self._config.name,
+                norm,
+                self._state,
+                self._pending_off_uid,
+            )
             await self._tag_on_locked(norm)
 
     async def _tag_on_locked(self, norm: str) -> None:
@@ -235,7 +245,14 @@ class BoxController:
     async def tag_off(self, uid: str) -> None:
         """Figur abgenommen: Entprellung starten (Spec 6.2 tag_off)."""
         norm = normalize_uid(uid)
+        _LOGGER.debug("Box %s: tag_off %s empfangen", self._config.name, norm)
         async with self._lock:
+            _LOGGER.debug(
+                "Box %s: tag_off %s verarbeitet (Zustand %s), Entprellung startet",
+                self._config.name,
+                norm,
+                self._state,
+            )
             if self._cancel_debounce is not None:
                 if self._pending_off_uid == norm:
                     return
@@ -269,12 +286,14 @@ class BoxController:
             figure = self._current_figure
             try:
                 if self._state is BoxState.PLAYING:
+                    content_id = self._player.snapshot().media_content_id
                     await self._player.pause()
+                    self._remember_pause(content_id)
                     await self._led.show(LED_HOLD)
                     self._set(BoxState.PAUSED_BY_BOX, figure)
                 else:
                     await self._cap_volume()
-                    await self._player.resume()
+                    await self._play_figure(figure, self._snapshot_at_removal)
                     await self._led.show(LED_PLAYING)
                     self._set(BoxState.PLAYING, figure)
             except PlayerError as err:
@@ -366,6 +385,13 @@ class BoxController:
             return
         try:
             snapshot = self._player.snapshot()
+            _LOGGER.debug(
+                "Box %s: Abnahme von %s, pausiere (Player %s, Inhalt %s)",
+                self._config.name,
+                figure.name,
+                snapshot.state,
+                snapshot.media_content_id,
+            )
             await self._player.pause()
         except PlayerError as err:
             _LOGGER.warning(
@@ -379,7 +405,7 @@ class BoxController:
             await self._led.show(LED_ERROR)
             self._set(BoxState.IDLE, None)
             return
-        self._snapshot_at_removal = snapshot.media_content_id
+        self._remember_pause(self._content_id_for_resume(snapshot.media_content_id))
         self._last_figure = figure
         await self._led.show(LED_PAUSED)
         self._set(BoxState.REMOVED, None)
@@ -408,11 +434,14 @@ class BoxController:
 
     async def _pause_current(self, figure: Figure) -> None:
         """Aktive Figur anhalten und für ein späteres Fortsetzen merken; Aufrufer hält den Lock."""
+        if self._state is BoxState.PAUSED_BY_BOX:
+            self._last_figure = figure
+            self._remember_pause(
+                self._content_id_for_resume(self._player.snapshot().media_content_id)
+            )
+            return
         self._last_figure = figure
         self._snapshot_at_removal = None
-        if self._state is BoxState.PAUSED_BY_BOX:
-            self._snapshot_at_removal = self._player.snapshot().media_content_id
-            return
         try:
             snapshot = self._player.snapshot()
             await self._player.pause()
@@ -421,26 +450,81 @@ class BoxController:
                 "Box %s: Pause von %s fehlgeschlagen: %s", self._config.name, figure.name, err
             )
             return
-        self._snapshot_at_removal = snapshot.media_content_id
+        self._remember_pause(snapshot.media_content_id)
+
+    def _remember_pause(self, content_id: str | None) -> None:
+        """Titel und Zeitpunkt einer Pause durch die Box merken (Spec 6.2)."""
+        self._snapshot_at_removal = content_id
+        self._paused_at = dt_util.utcnow()
+
+    def _content_id_for_resume(self, current: str | None) -> str | None:
+        """Nach einer Pause per Taster den damals gemerkten Titel behalten.
+
+        Music Assistant setzt einen pausierten Player nach kurzer Zeit auf ``idle``
+        und meldet dann ggf. keinen Inhalt mehr.
+        """
+        if self._state is BoxState.PAUSED_BY_BOX and self._snapshot_at_removal is not None:
+            return self._snapshot_at_removal
+        return current
+
+    def _resume_item(self, figure: Figure) -> str | None:
+        """Titel zum Fortsetzen, falls dieselbe Figur innerhalb der Frist zurückkommt."""
+        if (
+            figure != self._last_figure
+            or self._snapshot_at_removal is None
+            or self._paused_at is None
+        ):
+            return None
+        age = (dt_util.utcnow() - self._paused_at).total_seconds()
+        if age > RESUME_MAX_AGE_S:
+            return None
+        return self._snapshot_at_removal
+
+    async def _play_figure(self, figure: Figure, start_item: str | None) -> None:
+        """Figur abspielen, mit ``start_item`` ab dem gemerkten Titel.
+
+        Fortsetzen geht über ``play_media`` statt ``media_play``, weil Letzteres mit
+        Music Assistant und Sonos nicht zuverlässig weiterspielt. Scheitert der Start
+        beim gemerkten Titel, wird die Figur einmal von vorn gestartet.
+        """
+        if start_item is None:
+            _LOGGER.debug("Box %s: Neustart von %s", self._config.name, figure.name)
+            await self._player.play(figure.media_uri)
+            return
+        _LOGGER.debug(
+            "Box %s: Fortsetzen von %s ab %s", self._config.name, figure.name, start_item
+        )
+        try:
+            await self._player.play(figure.media_uri, start_item=start_item)
+        except PlayerError as err:
+            _LOGGER.debug(
+                "Box %s: Fortsetzen ab %s fehlgeschlagen (%s), Neustart von %s",
+                self._config.name,
+                start_item,
+                err,
+                figure.name,
+            )
+            await self._player.play(figure.media_uri)
 
     async def _start(self, figure: Figure) -> None:
         """Figur abspielen: weiterspielen oder neu starten (Spec 6.2 Schritte 3–6)."""
         self._set(self._state, figure)
         try:
             snapshot = self._player.snapshot()
-            if (
-                figure == self._last_figure
-                and self._snapshot_at_removal is not None
-                and snapshot.state == STATE_PAUSED
-                and snapshot.media_content_id == self._snapshot_at_removal
-            ):
-                await self._cap_volume()
-                await self._player.resume()
-            else:
-                self._set(BoxState.LOADING, figure)
-                await self._led.show(LED_LOADING)
-                await self._cap_volume()
-                await self._player.play(figure.media_uri)
+            _LOGGER.debug(
+                "Box %s: Start %s (Player %s, Inhalt %s, gemerkt %s, letzte Figur %s)",
+                self._config.name,
+                figure.name,
+                snapshot.state,
+                snapshot.media_content_id,
+                self._snapshot_at_removal,
+                self._last_figure.name if self._last_figure else None,
+            )
+            start_item = self._resume_item(figure)
+            self._set(BoxState.LOADING, figure)
+            await self._led.show(LED_LOADING)
+            await self._cap_volume()
+            await self._play_figure(figure, start_item)
         except PlayerError as err:
             _LOGGER.warning(
                 "Box %s: Wiedergabe von %s fehlgeschlagen: %s",
@@ -460,6 +544,14 @@ class BoxController:
             await self._led.show(LED_ERROR)
             self._set(BoxState.IDLE, None)
             return
+        after = self._player.snapshot()
+        _LOGGER.debug(
+            "Box %s: %s gestartet (Player %s, Inhalt %s)",
+            self._config.name,
+            figure.name,
+            after.state,
+            after.media_content_id,
+        )
         await self._led.show(LED_PLAYING)
         self._set(BoxState.PLAYING, figure)
 

@@ -68,42 +68,70 @@ async def test_flicker_within_debounce_is_ignored(hass, box):
     assert box.ctrl.current_figure.name == "Bobo"
 
 
-async def test_same_figure_resumes(hass, box):
+TRACK = "spotify://track/3n3Ppam7vgaVa1iaRUc9Lp"
+
+
+async def _removed_while_on_track(hass, box, track: str = TRACK) -> None:
+    """Bobo spielt Titel ``track`` und wird abgenommen (Pause nach der Entprellung)."""
     await box.ctrl.tag_on("04A1B2C3")
+    box.player.media_content_id = track
     await box.ctrl.tag_off("04A1B2C3")
     await _advance(hass, 1.1)
     assert box.player.state == "paused"
     box.player.calls.clear()
     box.led.shows.clear()
+
+
+async def test_same_figure_resumes_at_remembered_track(hass, box):
+    await _removed_while_on_track(hass, box)
     box.player.volume = 0.6  # Eltern haben aufgedreht
     await box.ctrl.tag_on("04A1B2C3")
-    assert box.player.calls == [("set_volume", 0.4), ("resume",)]
-    assert box.led.shows == [("playing", 0)]
+    assert box.player.calls == [("set_volume", 0.4), ("play", BOBO_URI, TRACK)]
+    assert box.led.shows == [("loading", 0), ("playing", 0)]
     assert box.ctrl.state is BoxState.PLAYING
     assert box.ctrl.current_figure.name == "Bobo"
 
 
-async def test_same_figure_restarts_if_player_changed(hass, box):
+async def test_same_figure_resumes_when_player_went_idle(hass, box):
+    """MA setzt einen pausierten Player nach kurzer Zeit auf idle: trotzdem fortsetzen."""
+    await _removed_while_on_track(hass, box)
+    box.player.state = "idle"
+    box.player.media_content_id = None
     await box.ctrl.tag_on("04A1B2C3")
-    await box.ctrl.tag_off("04A1B2C3")
-    await _advance(hass, 1.1)
-    box.player.media_content_id = "spotify://track/somethingElse"
-    box.player.calls.clear()
-    await box.ctrl.tag_on("04A1B2C3")
-    assert ("play", BOBO_URI) in box.player.calls
-    assert ("resume",) not in box.player.calls
+    assert box.player.calls == [("play", BOBO_URI, TRACK)]
     assert box.ctrl.state is BoxState.PLAYING
 
 
-async def test_same_figure_restarts_if_player_not_paused(hass, box):
+async def test_same_figure_resumes_within_30_minutes(hass, box, freezer):
+    await _removed_while_on_track(hass, box)
+    freezer.tick(timedelta(minutes=29))
     await box.ctrl.tag_on("04A1B2C3")
-    await box.ctrl.tag_off("04A1B2C3")
-    await _advance(hass, 1.1)
-    box.player.state = "idle"
-    box.player.calls.clear()
+    assert box.player.calls[-1] == ("play", BOBO_URI, TRACK)
+
+
+async def test_same_figure_restarts_after_30_minutes(hass, box, freezer):
+    await _removed_while_on_track(hass, box)
+    freezer.tick(timedelta(minutes=31))
     await box.ctrl.tag_on("04A1B2C3")
-    assert ("play", BOBO_URI) in box.player.calls
-    assert ("resume",) not in box.player.calls
+    assert box.player.calls == [("play", BOBO_URI)]
+    assert box.ctrl.state is BoxState.PLAYING
+
+
+async def test_resume_falls_back_to_restart_if_start_item_fails(hass, box):
+    await _removed_while_on_track(hass, box)
+    box.player.fail_start_item = True
+    await box.ctrl.tag_on("04A1B2C3")
+    assert box.player.calls == [("play", BOBO_URI)]
+    assert box.led.shows == [("loading", 0), ("playing", 0)]
+    assert box.ctrl.state is BoxState.PLAYING
+
+
+async def test_resume_and_fallback_fail_sets_error(hass, box):
+    await _removed_while_on_track(hass, box)
+    box.player.available = False
+    await box.ctrl.tag_on("04A1B2C3")
+    assert box.led.shows[-1] == ("error", 0)
+    assert box.ctrl.state is BoxState.IDLE
 
 
 async def test_other_figure_starts_fresh(hass, box):
@@ -112,8 +140,7 @@ async def test_other_figure_starts_fresh(hass, box):
     await _advance(hass, 1.1)
     box.player.calls.clear()
     await box.ctrl.tag_on("04B7C8D9")
-    assert ("play", FEUERWEHR_URI) in box.player.calls
-    assert ("resume",) not in box.player.calls
+    assert box.player.calls[-1] == ("play", FEUERWEHR_URI)
     assert box.ctrl.current_figure.name == "Feuerwehr"
     assert box.ctrl.state is BoxState.PLAYING
 
@@ -141,7 +168,7 @@ async def test_quick_swap_then_back_restarts(hass, box):
     await _advance(hass, 1.1)
     box.player.calls.clear()
     await box.ctrl.tag_on("04A1B2C3")
-    assert ("play", BOBO_URI) in box.player.calls
+    assert box.player.calls[-1] == ("play", BOBO_URI)
 
 
 async def test_quick_swap_to_unknown_pauses_old_figure(hass, box):
@@ -279,7 +306,7 @@ async def test_same_figure_back_during_slow_pause_resumes(hass, box):
     gate.set()
     await tag_on
     await hass.async_block_till_done()
-    assert box.player.calls[-2:] == [("pause",), ("resume",)]
+    assert box.player.calls[-2:] == [("pause",), ("play", BOBO_URI, BOBO_URI)]
     assert box.led.shows[-1] == ("playing", 0)
     assert box.ctrl.state is BoxState.PLAYING
     assert box.ctrl.current_figure.name == "Bobo"
@@ -342,7 +369,7 @@ async def test_removal_after_restart_pauses_known_figure(hass, box):
     box.player.calls.clear()
     box.player.volume = 0.3
     await box.ctrl.tag_on("04A1B2C3")
-    assert box.player.calls == [("resume",)]
+    assert box.player.calls == [("play", BOBO_URI, BOBO_URI)]
     assert box.ctrl.state is BoxState.PLAYING
 
 
@@ -377,6 +404,15 @@ async def test_duplicate_tag_on_resends_hold_led(hass, box):
     assert box.ctrl.state is BoxState.PAUSED_BY_BOX
 
 
+async def test_unknown_tag_then_same_figure_resumes(hass, box):
+    await box.ctrl.tag_on("04A1B2C3")
+    box.player.media_content_id = TRACK
+    await box.ctrl.tag_on("FFEE")
+    box.player.calls.clear()
+    await box.ctrl.tag_on("04A1B2C3")
+    assert box.player.calls[-1] == ("play", BOBO_URI, TRACK)
+
+
 async def test_unknown_tag_while_figure_playing_pauses_it(hass, box):
     """Lock-Fenster: Die bekannte Figur spielt noch, als ein unbekanntes Tag kommt."""
     await box.ctrl.tag_on("04A1B2C3")
@@ -399,7 +435,7 @@ async def test_unknown_tag_pause_error_does_not_raise(hass, box):
 
 
 async def test_unexpected_error_on_play_does_not_stick_in_loading(hass, box, caplog):
-    async def broken_play(media_uri: str) -> None:
+    async def broken_play(media_uri: str, start_item: str | None = None) -> None:
         raise ValueError("Schema geändert")
 
     box.player.play = broken_play
@@ -411,14 +447,12 @@ async def test_unexpected_error_on_play_does_not_stick_in_loading(hass, box, cap
 
 
 async def test_unexpected_error_on_resume_does_not_raise(hass, box):
-    await box.ctrl.tag_on("04A1B2C3")
-    await box.ctrl.tag_off("04A1B2C3")
-    await _advance(hass, 1.1)
+    await _removed_while_on_track(hass, box)
 
-    async def broken_resume() -> None:
+    async def broken_play(media_uri: str, start_item: str | None = None) -> None:
         raise ValueError("Schema geändert")
 
-    box.player.resume = broken_resume
+    box.player.play = broken_play
     await box.ctrl.tag_on("04A1B2C3")
     assert box.led.shows[-1] == ("error", 0)
     assert box.ctrl.state is BoxState.IDLE
