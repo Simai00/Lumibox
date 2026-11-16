@@ -112,13 +112,13 @@ packages:
 
 ### 4.3 LED-Steuerung über API-Action
 
-Die Box definiert unter `api: actions:` eine Action `set_led` mit den Variablen `mode: string` und `level: int`. In HA heisst sie `esphome.<node_name>_set_led`, z. B. `esphome.home_tonie_anna_set_led`. Die Effekte und Zeitabläufe stecken in der Firmware, damit HA keine Timer für die LEDs braucht.
+Die Box definiert unter `api: actions:` eine Action `set_led` mit den Variablen `mode: string`, `level: int` sowie `r`, `g`, `b: int` (0–255, Farbe für `playing`; siehe `2026-11-16-figurenfarbe-design.md`). In HA heisst sie `esphome.<node_name>_set_led`, z. B. `esphome.home_tonie_anna_set_led`. Die Effekte und Zeitabläufe stecken in der Firmware, damit HA keine Timer für die LEDs braucht.
 
 | `mode` | Darstellung | Dauer |
 | :--- | :--- | :--- |
 | `off` | aus | dauerhaft |
 | `loading` | Lade-Spinner (weiss) | bis zum nächsten Modus |
-| `playing` | sanftes Pulsieren (warmweiss, gedimmt) | dauerhaft |
+| `playing` | Farb-Spinner: Ring ~25 % in der Figurfarbe (`r/g/b`), heller Kopf mit Schweif, ca. eine Runde in 3 s | dauerhaft |
 | `hold` | statisch warmweiss, 10 % Helligkeit (Figur liegt, per Taster pausiert) | dauerhaft |
 | `paused` | kurz ausblenden, dann `off` | ~1,5 s |
 | `unknown` | 3× rot blinken, dann `off` | ~2 s |
@@ -153,6 +153,7 @@ Die Box definiert unter `api: actions:` eine Action `set_led` mit den Variablen 
 | `ma_username` | str | Music-Assistant-Benutzer des Kindes (z. B. `anna`). Sein Anbieterfilter erlaubt nur den Spotify-Account dieses Kindes. |
 | `max_volume` | int 5–100 %, Default 40 | Obergrenze für Aktionen der Box |
 | `volume_step` | int 1–10 %, Default 3 | Schrittweite pro Encoder-Raste |
+| `default_color` | Farbwähler `[r, g, b]`, Default Lila `[128, 0, 255]` | Farbe für Figuren ohne eigene Farbe |
 
 Ein ESPHome-Gerät darf nur einer Box zugeordnet sein (Validierung im Flow). Zwei Boxen mit demselben `ma_username` erzeugen eine **Warnung** im Formular („Diese Boxen können nicht gleichzeitig spielen“), werden aber nicht blockiert.
 
@@ -163,6 +164,7 @@ Ein ESPHome-Gerät darf nur einer Box zugeordnet sein (Validierung im Flow). Zwe
 | `uid` | str | normalisiert, siehe 5.3; eindeutig über alle Figuren |
 | `media_uri` | str | Spotify-URI, normalisiert, siehe 5.3 |
 | `mode` | select | v1 nur `restart` (Vorbereitung für `resume`) |
+| `color` | Farbwähler `[r, g, b]`, optional | LED-Farbe beim Spielen; fehlt sie, gilt `default_color` der Box |
 
 ### 5.2 Config Flow
 
@@ -188,7 +190,7 @@ Ein ESPHome-Gerät darf nur einer Box zugeordnet sein (Validierung im Flow). Zwe
 | `const.py` | Domain, Event-Name, Defaults | – |
 | `library.py` | Figurenbibliothek: `lookup(uid) -> Figure \| None`, Normalisierung von UID und URI (reine Funktionen) | Config Entry |
 | `player.py` | `PlayerAdapter`: `play(uri, start_item=None)`, `resume()`, `pause()`, `next()`, `prev()`, `get_volume()`, `set_volume(v)`, `snapshot()` (aktueller `media_content_id` + Zustand) | `hass.services`, `hass.states` |
-| `led.py` | `LedAdapter`: `show(mode, level=0)` → ruft `esphome.<node>_set_led` auf; ermittelt `<node>` aus dem Device Registry | `hass.services` |
+| `led.py` | `LedAdapter`: `show(mode, level=0, color=(0, 0, 0))` → ruft `esphome.<node>_set_led` mit `mode`, `level`, `r`, `g`, `b` auf; ermittelt `<node>` aus dem Device Registry | `hass.services` |
 | `box.py` | `BoxController` pro Box: Zustandsautomat aus Abschnitt 6 | Library, Player-/LedAdapter (injiziert) |
 | `sensor.py` | Pro Box: `sensor.<box>_aktuelle_figur`, `sensor.<box>_letzter_unbekannter_tag` | BoxController (Listener) |
 | `__init__.py` | Setup/Unload, abonniert `esphome.home_tonie`, verteilt per `device_id` an den richtigen `BoxController`. Bei Änderungen an Figuren wird nur die Bibliothek aktualisiert (kein Reload, laufende Wiedergabe bleibt unberührt); bei Änderungen an Boxen wird neu geladen | alle |

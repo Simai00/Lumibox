@@ -27,11 +27,17 @@ api:
       variables:
         mode: string
         level: int
+        r: int
+        g: int
+        b: int
       then:
         - script.execute:
             id: led_show
             mode: !lambda 'return mode;'
             level: !lambda 'return level;'
+            r: !lambda 'return r;'
+            g: !lambda 'return g;'
+            b: !lambda 'return b;'
 
 ota:
   platform: esphome
@@ -173,6 +179,16 @@ globals:
   - id: led_level
     type: int
     initial_value: '0'
+  # Farbe für "playing" (Figurfarbe, von HA mitgeschickt); Start: Lila
+  - id: led_r
+    type: int
+    initial_value: '128'
+  - id: led_g
+    type: int
+    initial_value: '0'
+  - id: led_b
+    type: int
+    initial_value: '255'
 
 light:
   - platform: esp32_rmt_led_strip
@@ -188,12 +204,21 @@ light:
     restore_mode: ALWAYS_OFF
     default_transition_length: 0s
     effects:
-      - pulse:
-          name: "Atmen"
-          transition_length: 1.5s
-          update_interval: 1.5s
-          min_brightness: 20%
-          max_brightness: 100%
+      # Farb-Spinner für "playing": Ring gedimmt in der Figurfarbe,
+      # heller Kopf mit Schweif, ca. eine Runde pro 3 s (24 x 125 ms)
+      - addressable_lambda:
+          name: "Farb-Spinner"
+          update_interval: 125ms
+          lambda: |-
+            static int pos = 0;
+            const int n = it.size();
+            Color c(id(led_r), id(led_g), id(led_b));
+            it.all() = c * 64;
+            it[(pos + n - 3) % n] = c * 100;
+            it[(pos + n - 2) % n] = c * 150;
+            it[(pos + n - 1) % n] = c * 200;
+            it[pos % n] = c;
+            pos = (pos + 1) % n;
 
       # Lade-Spinner: rotierender Punkt mit Schweif
       - addressable_lambda:
@@ -245,11 +270,11 @@ script:
                 then:
                   - light.turn_on:
                       id: status_led_ring
-                      brightness: 60%
+                      brightness: 100%
                       red: 100%
-                      green: 70%
-                      blue: 35%
-                      effect: "Atmen"
+                      green: 100%
+                      blue: 100%
+                      effect: "Farb-Spinner"
                 else:
                   - if:
                       condition:
@@ -274,12 +299,21 @@ script:
     parameters:
       mode: string
       level: int
+      r: int
+      g: int
+      b: int
     then:
       - if:
           condition:
             lambda: 'return mode == "off" || mode == "loading" || mode == "playing" || mode == "hold";'
           then:
-            - lambda: 'id(led_persistent) = mode;'
+            - lambda: |-
+                id(led_persistent) = mode;
+                if (mode == "playing") {
+                  id(led_r) = std::max(0, std::min(255, r));
+                  id(led_g) = std::max(0, std::min(255, g));
+                  id(led_b) = std::max(0, std::min(255, b));
+                }
             - script.execute: led_restore
           else:
             - if:

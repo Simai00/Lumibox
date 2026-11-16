@@ -84,8 +84,10 @@ Pro Box gibt es eine eigene Datei in `esphome/` (`home-tonie-anna.yaml`, `home-t
 ## Einrichtung
 
 1. Einstellungen, Geräte & Dienste, Integration hinzufügen, "Home Tonie".
-2. **Box hinzufügen:** Name, ESPHome-Gerät der Box, Ziel-Lautsprecher, Music-Assistant-Benutzer des Kindes, maximale Lautstärke und Schrittweite pro Encoder-Raste festlegen.
-3. **Figur hinzufügen:** Name, UID des Tags und Spotify-Link (Album, Playlist, Titel, Künstler, Podcast, Folge oder Hörbuch; `https://open.spotify.com/...` oder `spotify:...`).
+2. **Box hinzufügen:** Name, ESPHome-Gerät der Box, Ziel-Lautsprecher, Music-Assistant-Benutzer des Kindes, maximale Lautstärke, Schrittweite pro Encoder-Raste und Standardfarbe (vorbelegt Lila) festlegen.
+3. **Figur hinzufügen:** Name, UID des Tags und Spotify-Link (Album, Playlist, Titel, Künstler, Podcast, Folge oder Hörbuch; `https://open.spotify.com/...` oder `spotify:...`). Optional eine **Farbe**: In dieser Farbe dreht der Spinner im LED-Ring, solange die Figur spielt. Ohne eigene Farbe gilt die Standardfarbe der Box.
+
+**Wichtig:** Integration und Firmware zusammen aktualisieren. Die Integration schickt die Farbe an `set_led` mit (`r`, `g`, `b`), ältere Firmware kennt diese Felder nicht.
 
 **Figuren anlernen:** Eine unbekannte Figur auf eine Box legen. Die Box blinkt rot und Home Assistant zeigt eine Benachrichtigung mit der UID. Dann bei "Home Tonie" "Figur hinzufügen" wählen: Die UID ist bereits eingetragen, es fehlen nur Name und Spotify-Link. Nach dem Speichern die Figur einmal abheben und wieder auflegen, damit sie zu spielen beginnt.
 
@@ -98,10 +100,10 @@ Pro Box gibt es eine eigene Datei in `esphome/` (`home-tonie-anna.yaml`, `home-t
 4. Encoder drücken: `play_pause`. Taster GPIO26: `prev`, GPIO27: `next`. Ein Event pro Druck.
 5. `device_id` gehört zur richtigen Box (Anna bzw. Ben).
 
-**LED (Entwicklerwerkzeuge, Aktionen, `esphome.home_tonie_anna_set_led` bzw. `esphome.home_tonie_ben_set_led`, Felder `mode` und `level`):**
+**LED (Entwicklerwerkzeuge, Aktionen, `esphome.home_tonie_anna_set_led` bzw. `esphome.home_tonie_ben_set_led`, Felder `mode`, `level`, `r`, `g`, `b`):**
 6. `off`: Ring aus (auch nach dem Booten).
 7. `loading`: weisser Spinner bis zum nächsten Modus.
-8. `playing`: sanftes warmweisses Atmen, dauerhaft.
+8. `playing` mit `r: 255, g: 0, b: 0`: Ring gedimmt rot, ein hellerer roter Punkt mit Schweif dreht etwa eine Runde in 3 s, dauerhaft. Danach `volume` mit `level: 50`: nach ca. 1,5 s wieder der rote Spinner.
 9. `hold`: statisches, schwaches Warmweiss, dauerhaft.
 10. `paused`: blendet in ca. 1,5 s aus, dann aus.
 11. `unknown`: 3x rotes Blinken, dann aus.
