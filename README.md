@@ -75,11 +75,14 @@ Details: [Design-Spezifikation](docs/superpowers/specs/2026-11-13-home-tonie-int
 
 ## Firmware flashen
 
-Pro Box gibt es eine eigene Datei in `esphome/` (`home-tonie-anna.yaml`, `home-tonie-ben.yaml`). Sie enthält nur die Substitutions und bindet `home-tonie-common.yaml` ein.
+Die komplette Firmware einer Box steht in einer einzigen Datei: `esphome/home-tonie-common.yaml` (Gerätename `home-tonie`).
 
-1. Für eine weitere Box `home-tonie-anna.yaml` kopieren (z. B. `home-tonie-carla.yaml`) und die Substitutions (Gerätename, Anzeigename) anpassen.
-2. Die Konfiguration prüfen (benötigt Docker): `bash scripts/esphome-config.sh home-tonie-anna.yaml`
-3. Mit ESPHome flashen und die Box in Home Assistant zur ESPHome-Integration hinzufügen. `esphome/secrets.yaml` mit WLAN-Zugangsdaten muss lokal vorhanden sein und wird nicht eingecheckt.
+1. **Weitere Box:** Die Datei kopieren (z. B. `home-tonie-carla.yaml`, oder im ESPHome Builder als neues Gerät einfügen) und darin anpassen:
+   - `esphome: name` und `friendly_name` (z. B. `home-tonie-carla` / `Home Tonie Carla`), jeder Gerätename nur einmal;
+   - `wifi: ap: ssid` (Fallback-WLAN, z. B. `Home Tonie Carla Fallback`);
+   - `api: encryption: key` (eigener Schlüssel pro Box, als `!secret`).
+2. Die Konfiguration prüfen (benötigt Docker): `bash scripts/esphome-config.sh home-tonie-common.yaml`
+3. Mit ESPHome flashen und die Box in Home Assistant zur ESPHome-Integration hinzufügen. `esphome/secrets.yaml` (WLAN-Zugangsdaten, `home_tonie__encryption_key`) muss lokal vorhanden sein und wird nicht eingecheckt.
 
 ## Einrichtung
 
@@ -123,7 +126,7 @@ Pro Box gibt es eine eigene Datei in `esphome/` (`home-tonie-anna.yaml`, `home-t
 
 ## Hinweise und Fehlersuche
 
-- **Gerät umbenannt:** Die Firmware heisst jetzt `home-tonie-anna` bzw. `home-tonie-ben` (früher `home-tonie`). Ein bereits eingebundenes ESPHome-Gerät `home-tonie` muss in Home Assistant neu hinzugefügt werden.
+- **Gerätename geändert:** Wer `name` in der Firmware ändert, muss die Box in Home Assistant neu zur ESPHome-Integration hinzufügen und sie danach in der Box-Konfiguration von Home Tonie neu auswählen.
 - **Keine Events im Ereignis-Monitor:** Als Fehlersuche in den Optionen des ESPHome-Geräts "Allow the device to perform Home Assistant actions" aktivieren. Normalerweise ist das nicht nötig.
 - **Helligkeit im Haltemodus:** Sie ist bewusst niedrig (10 % bei 50 % Gesamtbegrenzung) und kann in `esphome/home-tonie-common.yaml` angepasst werden.
 - **Spotify-Kurzlinks** (`spotify.link`) werden nicht unterstützt. Den vollständigen Link `open.spotify.com/...` oder die URI `spotify:...` verwenden.

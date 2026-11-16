@@ -61,9 +61,8 @@ Eine physische Audio-Box für **Kleinkinder (ca. 2–5 Jahre)**: Figur mit NFC-T
 
 ```
 esphome/
-  home-tonie-common.yaml     # gesamte Box-Logik (Package)
-  home-tonie-anna.yaml       # nur substitutions + packages: common
-  home-tonie-ben.yaml        # dito
+  home-tonie-common.yaml     # vollständige Firmware einer Box (für weitere Boxen kopieren)
+  pn532-test.yaml            # Testprogramm nur für den NFC-Leser
   secrets.yaml               # nicht eingecheckt
 custom_components/home_tonie/
   __init__.py  manifest.json  const.py
@@ -80,17 +79,12 @@ Die Boxnamen `anna`/`ben` sind Platzhalter.
 
 ## 4. Firmware (ESPHome)
 
-### 4.1 Gemeinsames Package `home-tonie-common.yaml`
+### 4.1 Firmware-Datei `home-tonie-common.yaml`
 
-Enthält alles aus der heutigen `home-tonie.yaml`, mit folgenden Änderungen. Pro Box gibt es nur eine kleine Datei:
-
-```yaml
-substitutions:
-  device_name: home-tonie-anna
-  friendly_name: Home Tonie Anna
-packages:
-  common: !include home-tonie-common.yaml
-```
+Eine einzige, vollständige Datei pro Box (anfangs als Package mit kleinen Box-Dateien geplant; im Betrieb zu umständlich, deshalb vereinfacht).
+- Für jede weitere Box wird die Datei kopiert.
+- Pro Box angepasst werden `esphome: name`/`friendly_name`, `wifi: ap: ssid` und der API-Verschlüsselungsschlüssel.
+- Gerätenamen müssen pro Box eindeutig sein, denn HA leitet daraus den Action-Namen `esphome.<name>_set_led` ab.
 
 ### 4.2 Events an Home Assistant
 
