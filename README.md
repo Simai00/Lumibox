@@ -83,19 +83,19 @@ HACS zeigt ein verfügbares Update an. Dort "Aktualisieren" wählen und Home Ass
 
 ### Firmware der Box
 
-- Jede Box hat in Home Assistant eine Update-Entität **"Firmware"** (Einstellungen, Geräte & Dienste, Gerät der Box). Gibt es eine neue Version, dort auf "Installieren" drücken. Die Box lädt die Firmware selbst herunter und startet danach neu. Das dauert einige Minuten.
-- Ist eine Box für die installierte Integration **zu alt**, erscheint in Home Assistant unter Einstellungen, Reparaturen, ein Hinweis. Mit **"Jetzt aktualisieren"** startet das Update direkt aus dem Hinweis. Der Hinweis verschwindet, sobald die neue Firmware läuft.
+- Jede Box hat in Home Assistant eine Update-Entität **"Firmware"** (Einstellungen › Geräte & Dienste › Gerät der Box). Gibt es eine neue Version, dort auf "Installieren" drücken. Die Box lädt die Firmware selbst herunter und startet danach neu. Das dauert einige Minuten.
+- Ist eine Box für die installierte Integration **zu alt**, erscheint in Home Assistant unter Einstellungen › System › Reparaturen ein Hinweis. Mit **"Jetzt aktualisieren"** startet das Update direkt aus dem Hinweis. Der Hinweis verschwindet, sobald die neue Firmware läuft.
 - Während des Updates die Box nicht vom Strom trennen.
 
 ### Wenn das Update nicht startet
 
 1. Ist die Box eingeschaltet und im WLAN? Ohne WLAN und Internet kann sie die Firmware nicht herunterladen (sie kommt von GitHub Pages).
-2. Einstellungen, Geräte & Dienste, Updates: Die Liste neu laden ("Nach Updates suchen"). Die Box prüft von sich aus alle 6 Stunden.
+2. Einstellungen (ganz oben erscheint das Update) bzw. Einstellungen › System › Updates: Die Liste neu laden ("Nach Updates suchen"). Die Box prüft von sich aus alle 6 Stunden.
 3. Die Box neu starten (Strom trennen und wieder anstecken) und erneut versuchen.
 
 ## Installation (für den Einrichtenden)
 
-1. **Integration:** HACS, Menü, "Benutzerdefinierte Repositories", `https://github.com/Simai00/lumibox` mit Kategorie "Integration" hinzufügen, "Lumibox" installieren und Home Assistant neu starten. Manuell geht auch: Den Ordner `custom_components/lumibox` nach `custom_components` kopieren.
+1. **Integration:** HACS › Menü › "Benutzerdefinierte Repositories", `https://github.com/Simai00/lumibox` mit Kategorie "Integration" hinzufügen, "Lumibox" installieren und Home Assistant neu starten. Manuell geht auch: Den Ordner `custom_components/lumibox` nach `custom_components` kopieren.
 2. **Firmware per USB flashen:** Für alle Boxen gilt dieselbe Firmware. Die Datei `lumibox-<Version>.factory.bin` aus dem neuesten [Release](https://github.com/Simai00/lumibox/releases) per USB-Kabel auf den ESP32 schreiben (z. B. mit [web.esphome.io](https://web.esphome.io)) oder `esphome/lumibox.yaml` im ESPHome Builder installieren. Der Gerätename entsteht automatisch aus `lumibox` und einem Teil der MAC-Adresse (z. B. `lumibox-1a2b3c`), eine eigene Kopie pro Box ist nicht nötig.
 3. **WLAN:** Die Box öffnet das Setup-WLAN **"Lumibox Setup"**. Damit verbinden und im Captive Portal das Heim-WLAN eintragen.
 4. **Box in Home Assistant hinzufügen:** Home Assistant findet die Box als ESPHome-Gerät. Beim Hinzufügen setzt Home Assistant den API-Schlüssel automatisch, es muss keiner eingegeben werden.
@@ -105,7 +105,7 @@ HACS zeigt ein verfügbares Update an. Dort "Aktualisieren" wählen und Home Ass
 
 ## Einrichtung
 
-1. Einstellungen, Geräte & Dienste, Integration hinzufügen, "Lumibox".
+1. Einstellungen › Geräte & Dienste › Integration hinzufügen › "Lumibox".
 2. **Box hinzufügen:** Name, ESPHome-Gerät der Box, Ziel-Lautsprecher, Music-Assistant-Benutzer des Kindes, maximale Lautstärke, Schrittweite pro Encoder-Raste und Standardfarbe (vorbelegt Lila) festlegen.
 3. **Figur hinzufügen:** Name, UID des Tags und Spotify-Link (Album, Playlist, Titel, Künstler, Podcast, Folge oder Hörbuch; `https://open.spotify.com/...` oder `spotify:...`). Optional eine **Farbe**: In dieser Farbe dreht der Spinner im LED-Ring, solange die Figur spielt. Ohne eigene Farbe gilt die Standardfarbe der Box.
 
@@ -154,6 +154,6 @@ HACS zeigt ein verfügbares Update an. Dort "Aktualisieren" wählen und Home Ass
 
 - Tests: `bash scripts/test.sh -q` (Docker, baut ein Testimage). Firmware-Konfiguration prüfen: `bash scripts/esphome-config.sh lumibox.yaml`.
 - **Release:** `bash scripts/bump-version.sh X.Y.Z` setzt die Version in Integration und Firmware, danach committen, `git tag vX.Y.Z` und den Tag pushen. Die Pipeline prüft die Versionen, baut die Firmware, erstellt das GitHub-Release mit `*.factory.bin`, `*.ota.bin` und automatischen Release Notes und veröffentlicht danach `/firmware/manifest.json` auf GitHub Pages, woher die Boxen ihre Updates holen.
-- **Einmalig im GitHub-Repo:** Settings, Pages, Source auf "GitHub Actions" stellen. Unter Settings, Environments, `github-pages` eine Deployment-Regel für Tags `v*` hinzufügen, sonst wird das Deployment aus dem Tag-Lauf abgelehnt.
+- **Einmalig im GitHub-Repo:** Settings › Pages › Source auf "GitHub Actions" stellen. Unter Settings › Environments › `github-pages` eine Deployment-Regel für Tags `v*` hinzufügen, sonst wird das Deployment aus dem Tag-Lauf abgelehnt.
 - **HACS-Voraussetzungen im Repo:** Beschreibung, Topics und Releases müssen gesetzt sein. Nach der Veröffentlichung können die Ausnahmen `ignore: brands topics description` des HACS-Checks in `.github/workflows/ci.yml` entfernt werden.
 - Die Marken-Icons der Integration liegen in `custom_components/lumibox/brand/`.
