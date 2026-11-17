@@ -64,7 +64,7 @@ def test_check_mismatch(tmp_path):
     result = _run(CHECK, [], (manifest, firmware))
     assert result.returncode == 1
     assert "0.9.9" in result.stderr + result.stdout
-    assert "0.2.0" in result.stderr + result.stdout
+    assert _current_version() in result.stderr + result.stdout
 
 
 def test_bump(tmp_path):
