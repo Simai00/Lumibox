@@ -79,10 +79,9 @@ Die komplette Firmware einer Box steht in einer einzigen Datei: `esphome/lumibox
 
 1. **Weitere Box:** Die Datei kopieren (z. B. `lumibox-carla.yaml`, oder im ESPHome Builder als neues Gerät einfügen) und darin anpassen:
    - `esphome: name` und `friendly_name` (z. B. `lumibox-carla` / `Lumibox Carla`), jeder Gerätename nur einmal;
-   - `wifi: ap: ssid` (Fallback-WLAN, z. B. `Lumibox Carla Fallback`);
-   - `api: encryption: key` (eigener Schlüssel pro Box, als `!secret`).
+   - `wifi: ap: ssid` (Fallback-WLAN, z. B. `Lumibox Carla Setup`).
 2. Die Konfiguration prüfen (benötigt Docker): `bash scripts/esphome-config.sh lumibox.yaml`
-3. Mit ESPHome flashen und die Box in Home Assistant zur ESPHome-Integration hinzufügen. `esphome/secrets.yaml` (WLAN-Zugangsdaten, `lumibox_encryption_key`) muss lokal vorhanden sein und wird nicht eingecheckt.
+3. Mit ESPHome flashen und die Box in Home Assistant zur ESPHome-Integration hinzufügen. Die Firmware enthält keine Zugangsdaten: WLAN richtest du über das Setup-WLAN "Lumibox Setup" ein, den API-Schlüssel setzt Home Assistant beim ersten Verbinden.
 
 ## Einrichtung
 

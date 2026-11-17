@@ -4,6 +4,7 @@ substitutions:
 esphome:
   name: lumibox
   friendly_name: Lumibox
+  name_add_mac_suffix: true
   project:
     name: "simai00.lumibox"
     version: "${version}"
@@ -41,20 +42,32 @@ api:
             g: !lambda 'return g;'
             b: !lambda 'return b;'
 
-  encryption:
-    key: !secret lumibox_encryption_key
+  # Ohne key: Home Assistant richtet den Schluessel beim ersten Verbinden selbst ein.
+  encryption: {}
+
 ota:
-  platform: esphome
-  encryption:
+  - platform: esphome
+  - platform: http_request
+
+http_request:
+  verify_ssl: true
+  timeout: 30s
+  watchdog_timeout: 60s
+
+update:
+  - platform: http_request
+    name: "Firmware"
+    source: https://simai00.github.io/lumibox/firmware/manifest.json
+    update_interval: 6h
 
 wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
   power_save_mode: none
   ap:
-    ssid: Lumibox Fallback
-    password: !secret wifi_ap_password
+    ssid: "Lumibox Setup"
 captive_portal:
+
+dashboard_import:
+  package_import_url: github://Simai00/lumibox/esphome/lumibox.yaml@main
 
 spi:
   clk_pin: GPIO18
