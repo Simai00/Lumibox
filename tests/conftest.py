@@ -84,6 +84,19 @@ def _esphome_device(hass, mac: str, device_name: str, name: str) -> dr.DeviceEnt
     )
 
 
+def add_esphome_entity(hass, device: dr.DeviceEntry, state: str = "on") -> str:
+    """ESPHome-Entität am Gerät registrieren und State setzen; liefert die entity_id."""
+    entry = er.async_get(hass).async_get_or_create(
+        "binary_sensor",
+        "esphome",
+        f"{device.id}_status",
+        device_id=device.id,
+        suggested_object_id=f"{device.name.lower().replace(' ', '_')}_status",
+    )
+    hass.states.async_set(entry.entity_id, state)
+    return entry.entity_id
+
+
 @pytest.fixture
 def esphome_device(hass) -> dr.DeviceEntry:
     """ESPHome-Gerät „Lumibox Anna“."""
@@ -204,6 +217,9 @@ class TwoBoxes:
     play: list[ServiceCall]
     media_player: dict[str, list[ServiceCall]]
     led: dict[str, list[ServiceCall]]
+    # ESPHome-Entitäten, aus denen die Verbindung der Box abgeleitet wird
+    anna_status: str
+    ben_status: str
 
     def box_subentry(self, name: str) -> ConfigSubentry:
         """Box-Subentry anhand des Namens."""
@@ -235,6 +251,8 @@ async def two_boxes_entry(hass):
     """Boxen Anna (media_player.anna, anna) und Ben (media_player.ben, ben), Figuren Bobo und Feuerwehr."""
     anna = _esphome_device(hass, "aa:bb:cc:dd:ee:11", "lumibox-anna", "Lumibox Anna")
     ben = _esphome_device(hass, "aa:bb:cc:dd:ee:12", "lumibox-ben", "Lumibox Ben")
+    anna_status = add_esphome_entity(hass, anna)
+    ben_status = add_esphome_entity(hass, ben)
     hass.states.async_set("media_player.anna", "idle", {"volume_level": 0.3})
     hass.states.async_set("media_player.ben", "idle", {"volume_level": 0.3})
     play = async_mock_service(hass, "music_assistant", "play_media")
@@ -252,7 +270,7 @@ async def two_boxes_entry(hass):
             _figure_subentry(FEUERWEHR),
         ],
     )
-    yield TwoBoxes(entry, anna.id, ben.id, play, media_player, led)
+    yield TwoBoxes(entry, anna.id, ben.id, play, media_player, led, anna_status, ben_status)
     if entry.state is ConfigEntryState.LOADED:
         assert await hass.config_entries.async_unload(entry.entry_id)
         await hass.async_block_till_done()

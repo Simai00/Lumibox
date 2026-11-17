@@ -14,6 +14,7 @@ from homeassistant.const import Platform
 from homeassistant.core import Event, HomeAssistant, callback
 
 from .box import BoxConfig, BoxController
+from .connection import BoxConnection
 from .const import (
     CONF_DEFAULT_COLOR,
     DEFAULT_BOX_COLOR,
@@ -34,7 +35,7 @@ from .player import PlayerAdapter
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = [Platform.SENSOR]
+PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
 
 @dataclass
@@ -43,6 +44,8 @@ class LumiboxData:
 
     library: FigureLibrary
     controllers: dict[str, BoxController]
+    # Verbindungsstatus pro Box (subentry_id → BoxConnection)
+    connections: dict[str, BoxConnection]
     last_unknown_uid: str | None = None
 
 
@@ -74,7 +77,7 @@ def _box_config(subentry_id: str, title: str, data: Mapping[str, Any]) -> BoxCon
 async def async_setup_entry(hass: HomeAssistant, entry: LumiboxConfigEntry) -> bool:
     """Haupteintrag einrichten: Bibliothek, Controller pro Box, Event-Listener."""
     library = FigureLibrary(FigureLibrary.figures_from_entry(entry))
-    data = LumiboxData(library=library, controllers={})
+    data = LumiboxData(library=library, controllers={}, connections={})
 
     @callback
     def _on_unknown_tag(uid: str) -> None:
@@ -92,7 +95,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: LumiboxConfigEntry) -> b
             LedAdapter(hass, config.esphome_device_id),
             on_unknown_tag=_on_unknown_tag,
         )
+        data.connections[config.subentry_id] = BoxConnection(hass, config.esphome_device_id)
     entry.runtime_data = data
+    for connection in data.connections.values():
+        await connection.async_start()
     entry.async_on_unload(
         async_setup_firmware_checks(hass, [c.config for c in data.controllers.values()])
     )
@@ -134,6 +140,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: LumiboxConfigEntry) -> b
             await asyncio.wait(set(inflight))
         for controller in data.controllers.values():
             controller.async_shutdown()
+        for connection in data.connections.values():
+            await connection.async_stop()
 
     # on_unload-Callbacks laufen in umgekehrter Reihenfolge: erst Listener abmelden, dann Shutdown.
     entry.async_on_unload(_async_shutdown)

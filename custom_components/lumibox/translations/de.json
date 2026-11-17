@@ -138,6 +138,11 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "connected": {
+        "name": "Verbunden"
+      }
+    },
     "sensor": {
       "current_figure": {
         "name": "Aktuelle Figur"
