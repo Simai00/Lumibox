@@ -13,7 +13,7 @@ esphome:
     priority: -100
     then:
       - logger.log: "Lumibox gestartet"
-      - script.execute: led_restore
+      - script.execute: status_boot
 
 esp32:
   board: esp32dev
@@ -45,9 +45,28 @@ api:
   # Ohne key: Home Assistant richtet den Schluessel beim ersten Verbinden selbst ein.
   encryption: {}
 
+# OTA-Trigger: lokale Update-Anzeige (cyan Füllstand), gleich für beide Plattformen.
 ota:
   - platform: esphome
+    on_begin:
+      - script.execute: status_update_begin
+    on_progress:
+      - lambda: 'id(status_ota_progress) = x;'
+      - script.execute: status_update_draw
+    on_error:
+      - script.execute: status_update_failed
+    on_abort:
+      - script.execute: status_update_failed
   - platform: http_request
+    on_begin:
+      - script.execute: status_update_begin
+    on_progress:
+      - lambda: 'id(status_ota_progress) = x;'
+      - script.execute: status_update_draw
+    on_error:
+      - script.execute: status_update_failed
+    on_abort:
+      - script.execute: status_update_failed
 
 http_request:
   verify_ssl: true
@@ -90,6 +109,7 @@ pn532_spi:
           data:
             action: tag_on
             uid: !lambda 'return x;'
+      - script.execute: status_interaction
   on_tag_removed:
     then:
       - logger.log:
@@ -123,11 +143,13 @@ sensor:
           event: esphome.lumibox
           data:
             action: rotate_cw
+      - script.execute: status_interaction
     on_anticlockwise:
       - homeassistant.event:
           event: esphome.lumibox
           data:
             action: rotate_ccw
+      - script.execute: status_interaction
 
 binary_sensor:
   - platform: gpio
@@ -148,6 +170,7 @@ binary_sensor:
           event: esphome.lumibox
           data:
             action: play_pause
+      - script.execute: status_interaction
 
   - platform: gpio
     id: button_prev
@@ -167,6 +190,7 @@ binary_sensor:
           event: esphome.lumibox
           data:
             action: prev
+      - script.execute: status_interaction
 
   - platform: gpio
     id: button_next
@@ -186,8 +210,9 @@ binary_sensor:
           event: esphome.lumibox
           data:
             action: next
+      - script.execute: status_interaction
 
-# --- LED-Ring: wird ausschliesslich über set_led gesteuert ---
+# --- LED-Ring: über set_led gesteuert; lokale Status-Anzeigen (status_*) haben Vorrang ---
 globals:
   # Dauer-Modus, zu dem nach volume/Übergangsmodi zurückgekehrt wird: off | loading | playing | hold
   - id: led_persistent
@@ -206,6 +231,69 @@ globals:
   - id: led_b
     type: int
     initial_value: '255'
+
+  # --- Lokale Status-Anzeige (Start, Bereit, Setup, Update, Fehler) ---
+  # true, solange ein lokaler Status die LED belegt: set_led merkt sich dann nur den Dauer-Modus.
+  - id: status_active
+    type: bool
+    initial_value: 'false'
+  # Startphase: ab Boot bis HA verbunden oder 60 s abgelaufen
+  - id: status_boot_phase
+    type: bool
+    initial_value: 'true'
+  # Setup-AP wird gerade angezeigt
+  - id: status_setup
+    type: bool
+    initial_value: 'false'
+  # Firmware-Update läuft
+  - id: status_ota
+    type: bool
+    initial_value: 'false'
+  - id: status_ota_progress
+    type: float
+    initial_value: '0'
+  # HA (Client mit Zustands-Abo) war beim letzten Prüfen verbunden; für "Bereit" bei Neuverbindung
+  - id: status_api_was_connected
+    type: bool
+    initial_value: 'false'
+  # Startzeitpunkt der laufenden Status-Animation (millis)
+  - id: status_anim_start
+    type: uint32_t
+    initial_value: '0'
+
+# Prüft regelmässig Setup-AP und HA-Verbindung (dafür gibt es keine passenden Trigger).
+interval:
+  - interval: 500ms
+    then:
+      - if:
+          condition:
+            and:
+              - wifi.ap_active:
+              - lambda: 'return !id(status_setup);'
+          then:
+            - script.execute: status_setup_begin
+      - if:
+          condition:
+            and:
+              - not:
+                  wifi.ap_active:
+              - lambda: 'return id(status_setup);'
+          then:
+            - script.execute: status_setup_end
+      # Nur Clients mit Zustands-Abo (HA) zählen, nicht z. B. ein Log-Fenster im Dashboard.
+      - if:
+          condition:
+            api.connected:
+              state_subscription_only: true
+          then:
+            - if:
+                condition:
+                  lambda: 'return !id(status_api_was_connected);'
+                then:
+                  - lambda: 'id(status_api_was_connected) = true;'
+                  - script.execute: status_ready
+          else:
+            - lambda: 'id(status_api_was_connected) = false;'
 
 light:
   - platform: esp32_rmt_led_strip
@@ -262,6 +350,48 @@ light:
             it.all() = Color::BLACK;
             for (int i = 0; i < n && i < it.size(); i++) {
               it[i] = current_color;
+            }
+
+      # Lokale Status-Anzeige: langsames Atmen (Start weiss, Setup blau), Periode 4 s
+      - addressable_lambda:
+          name: "Atmen"
+          update_interval: 40ms
+          lambda: |-
+            const float t = ((millis() - id(status_anim_start)) % 4000) / 4000.0f;
+            const float k = 0.5f - 0.5f * cosf(2.0f * (float) M_PI * t);
+            it.all() = current_color * (uint8_t) (20 + k * 235);
+
+      # Bereit: Ring füllt sich einmal rundherum (~1,2 s), dann voll bis zum Ende (1,5 s)
+      - addressable_lambda:
+          name: "Bereit"
+          update_interval: 30ms
+          lambda: |-
+            const uint32_t dt = millis() - id(status_anim_start);
+            const int n = it.size();
+            const int lit = (int) (dt * n / 1200) + 1;
+            for (int i = 0; i < n; i++) {
+              it[i] = i < lit ? current_color : Color::BLACK;
+            }
+
+      # Fehler: langsames Pulsieren aus-hell-aus, Periode 2 s (2x in 4 s)
+      - addressable_lambda:
+          name: "Fehler-Puls"
+          update_interval: 40ms
+          lambda: |-
+            const float t = ((millis() - id(status_anim_start)) % 2000) / 2000.0f;
+            const float k = 0.5f - 0.5f * cosf(2.0f * (float) M_PI * t);
+            it.all() = current_color * (uint8_t) (k * 255);
+
+      # Firmware-Update: Füllstand = Fortschritt, Rest schwach.
+      # Während des Flashens läuft die Hauptschleife nicht; dann zeichnet status_update_draw direkt.
+      - addressable_lambda:
+          name: "Update-Fortschritt"
+          update_interval: 200ms
+          lambda: |-
+            const int n = it.size();
+            const int lit = (int) (id(status_ota_progress) * n / 100.0f + 0.5f);
+            for (int i = 0; i < n; i++) {
+              it[i] = i < lit ? current_color : current_color * 25;
             }
 
 script:
@@ -331,71 +461,309 @@ script:
                   id(led_g) = std::max(0, std::min(255, g));
                   id(led_b) = std::max(0, std::min(255, b));
                 }
-            - script.execute: led_restore
+            # Während eines lokalen Status nur merken; gezeichnet wird nach dessen Ende.
+            - if:
+                condition:
+                  lambda: 'return !id(status_active);'
+                then:
+                  - script.execute: led_restore
           else:
             - if:
                 condition:
-                  lambda: 'return mode == "volume";'
+                  lambda: 'return id(status_active);'
                 then:
-                  - lambda: 'id(led_level) = level;'
-                  - light.turn_on:
-                      id: status_led_ring
-                      brightness: 100%
-                      red: 100%
-                      green: 100%
-                      blue: 100%
-                      effect: "Pegel"
-                  - delay: 1.5s
-                  - script.execute: led_restore
+                  # Lokaler Status hat Vorrang: nichts zeichnen. paused/unknown/error enden bei off.
+                  - lambda: |-
+                      if (mode == "paused" || mode == "unknown" || mode == "error") {
+                        id(led_persistent) = "off";
+                      }
                 else:
-                  # paused, unknown, error: enden immer bei off
-                  - lambda: 'id(led_persistent) = "off";'
                   - if:
                       condition:
-                        lambda: 'return mode == "paused";'
+                        lambda: 'return mode == "volume";'
                       then:
-                        - light.turn_off:
+                        - lambda: 'id(led_level) = level;'
+                        - light.turn_on:
                             id: status_led_ring
-                            transition_length: 1.5s
+                            brightness: 100%
+                            red: 100%
+                            green: 100%
+                            blue: 100%
+                            effect: "Pegel"
                         - delay: 1.5s
                         - script.execute: led_restore
                       else:
+                        # paused, unknown, error: enden immer bei off
+                        - lambda: 'id(led_persistent) = "off";'
                         - if:
                             condition:
-                              lambda: 'return mode == "unknown";'
+                              lambda: 'return mode == "paused";'
                             then:
-                              # 3x rot blinken, ca. 2 s
-                              - repeat:
-                                  count: 3
-                                  then:
-                                    - light.turn_on:
-                                        id: status_led_ring
-                                        brightness: 100%
-                                        red: 100%
-                                        green: 0%
-                                        blue: 0%
-                                        effect: "None"
-                                    - delay: 350ms
-                                    - light.turn_off:
-                                        id: status_led_ring
-                                        transition_length: 0s
-                                    - delay: 300ms
+                              - light.turn_off:
+                                  id: status_led_ring
+                                  transition_length: 1.5s
+                              - delay: 1.5s
                               - script.execute: led_restore
                             else:
                               - if:
                                   condition:
-                                    lambda: 'return mode == "error";'
+                                    lambda: 'return mode == "unknown";'
                                   then:
-                                    - light.turn_on:
-                                        id: status_led_ring
-                                        brightness: 100%
-                                        red: 100%
-                                        green: 0%
-                                        blue: 0%
-                                        effect: "None"
-                                    - delay: 3s
+                                    # 3x rot blinken, ca. 2 s
+                                    - repeat:
+                                        count: 3
+                                        then:
+                                          - light.turn_on:
+                                              id: status_led_ring
+                                              brightness: 100%
+                                              red: 100%
+                                              green: 0%
+                                              blue: 0%
+                                              effect: "None"
+                                          - delay: 350ms
+                                          - light.turn_off:
+                                              id: status_led_ring
+                                              transition_length: 0s
+                                          - delay: 300ms
                                     - script.execute: led_restore
                                   else:
-                                    - logger.log:
-                                        format: "Unbekannter LED-Modus: %s"
-                                        args: ['mode.c_str()']
+                                    - if:
+                                        condition:
+                                          lambda: 'return mode == "error";'
+                                        then:
+                                          - light.turn_on:
+                                              id: status_led_ring
+                                              brightness: 100%
+                                              red: 100%
+                                              green: 0%
+                                              blue: 0%
+                                              effect: "None"
+                                          - delay: 3s
+                                          - script.execute: led_restore
+                                        else:
+                                          - logger.log:
+                                              format: "Unbekannter LED-Modus: %s"
+                                              args: ['mode.c_str()']
+
+  # --- Lokale Status-Anzeige ---
+  # Vorrang: Update > Setup-WLAN > Start/Bereit/Fehler > set_led aus HA.
+  # Jede Anzeige setzt status_active; beim Ende status_active = false und led_restore.
+
+  # Start: weiss atmend bis HA verbunden (status_ready stoppt dieses Script), höchstens 60 s.
+  - id: status_boot
+    mode: restart
+    then:
+      - script.stop: led_show
+      - lambda: |-
+          id(status_boot_phase) = true;
+          id(status_active) = true;
+          id(status_anim_start) = millis();
+      - light.turn_on:
+          id: status_led_ring
+          brightness: 100%
+          red: 100%
+          green: 100%
+          blue: 100%
+          effect: "Atmen"
+      - delay: 60s
+      # Startphase ohne HA beendet: Fehler einmal zeigen, dann aus
+      - lambda: |-
+          id(status_boot_phase) = false;
+          id(status_active) = false;
+      - script.execute: led_restore
+      - script.execute: status_fault_show
+
+  # Bereit: grün einmal rundherum füllen (~1,5 s), danach wieder der Modus von HA.
+  - id: status_ready
+    mode: restart
+    then:
+      - script.stop: status_boot
+      - lambda: 'id(status_boot_phase) = false;'
+      - if:
+          condition:
+            lambda: 'return !id(status_ota) && !id(status_setup);'
+          then:
+            - script.stop: status_fault_show
+            - script.stop: led_show
+            - lambda: |-
+                id(status_active) = true;
+                id(status_anim_start) = millis();
+            - light.turn_on:
+                id: status_led_ring
+                brightness: 100%
+                red: 0%
+                green: 100%
+                blue: 0%
+                effect: "Bereit"
+            - delay: 1.5s
+            - lambda: 'id(status_active) = false;'
+            - script.execute: led_restore
+            # NFC-Ausfall einmal nach "Bereit" zeigen
+            - if:
+                condition:
+                  lambda: 'return id(nfc_reader)->is_failed();'
+                then:
+                  - script.execute: status_fault_show
+
+  # Zeigt den zutreffenden Fehler je ~4 s (2x pulsieren), danach wieder der Modus von HA:
+  # kein WLAN (rot) vor WLAN ohne HA (orange); NFC-Leser ausgefallen (magenta) zusätzlich.
+  - id: status_fault_show
+    mode: single
+    then:
+      - if:
+          condition:
+            lambda: 'return !id(status_ota) && !id(status_setup);'
+          then:
+            - script.stop: led_show
+            - if:
+                condition:
+                  not:
+                    wifi.connected:
+                then:
+                  - lambda: |-
+                      id(status_active) = true;
+                      id(status_anim_start) = millis();
+                  - light.turn_on:
+                      id: status_led_ring
+                      brightness: 100%
+                      red: 100%
+                      green: 0%
+                      blue: 0%
+                      effect: "Fehler-Puls"
+                  - delay: 4s
+                else:
+                  - if:
+                      condition:
+                        not:
+                          api.connected:
+                            state_subscription_only: true
+                      then:
+                        - lambda: |-
+                            id(status_active) = true;
+                            id(status_anim_start) = millis();
+                        - light.turn_on:
+                            id: status_led_ring
+                            brightness: 100%
+                            red: 100%
+                            green: 40%
+                            blue: 0%
+                            effect: "Fehler-Puls"
+                        - delay: 4s
+            - if:
+                condition:
+                  lambda: 'return id(nfc_reader)->is_failed();'
+                then:
+                  - lambda: |-
+                      id(status_active) = true;
+                      id(status_anim_start) = millis();
+                  - light.turn_on:
+                      id: status_led_ring
+                      brightness: 100%
+                      red: 100%
+                      green: 0%
+                      blue: 100%
+                      effect: "Fehler-Puls"
+                  - delay: 4s
+            - lambda: 'id(status_active) = false;'
+            - script.execute: led_restore
+
+  # Bei Figur, Taster, Encoder: Fehler zeigen, solange HA nicht verbunden ist.
+  # Nicht während Start, Setup, Update oder einer laufenden Fehleranzeige.
+  - id: status_interaction
+    mode: single
+    then:
+      - if:
+          condition:
+            and:
+              - not:
+                  api.connected:
+                    state_subscription_only: true
+              - lambda: 'return !id(status_boot_phase) && !id(status_setup) && !id(status_ota);'
+              - not:
+                  script.is_running: status_fault_show
+          then:
+            - script.execute: status_fault_show
+
+  # Setup-WLAN: blau atmend, solange der AP offen ist.
+  - id: status_setup_begin
+    mode: restart
+    then:
+      - lambda: |-
+          id(status_setup) = true;
+          id(status_boot_phase) = false;
+      - script.stop: status_boot
+      - script.stop: status_ready
+      - script.stop: status_fault_show
+      - if:
+          condition:
+            lambda: 'return !id(status_ota);'
+          then:
+            - script.stop: led_show
+            - lambda: |-
+                id(status_active) = true;
+                id(status_anim_start) = millis();
+            - light.turn_on:
+                id: status_led_ring
+                brightness: 100%
+                red: 0%
+                green: 0%
+                blue: 100%
+                effect: "Atmen"
+
+  - id: status_setup_end
+    mode: restart
+    then:
+      - lambda: 'id(status_setup) = false;'
+      - if:
+          condition:
+            lambda: 'return !id(status_ota);'
+          then:
+            - lambda: 'id(status_active) = false;'
+            - script.execute: led_restore
+
+  # Firmware-Update: cyan Füllstand = Fortschritt. Nach Erfolg startet die Box neu.
+  - id: status_update_begin
+    mode: restart
+    then:
+      - lambda: |-
+          id(status_ota) = true;
+          id(status_ota_progress) = 0;
+          id(status_boot_phase) = false;
+          id(status_active) = true;
+      - script.stop: status_boot
+      - script.stop: status_ready
+      - script.stop: status_fault_show
+      - script.stop: led_show
+      - light.turn_on:
+          id: status_led_ring
+          brightness: 100%
+          red: 0%
+          green: 100%
+          blue: 100%
+          effect: "Update-Fortschritt"
+      - script.execute: status_update_draw
+
+  # Zeichnet den Fortschritt direkt: Das Flashen blockiert die Hauptschleife,
+  # Effekte würden sonst bis zum Neustart nicht aktualisiert.
+  - id: status_update_draw
+    mode: restart
+    then:
+      - lambda: |-
+          auto *out = static_cast<light::AddressableLight *>(id(status_led_ring)->get_output());
+          const int n = out->size();
+          const int lit = (int) (id(status_ota_progress) * n / 100.0f + 0.5f);
+          const Color c(0, 255, 255);
+          for (int i = 0; i < n; i++) {
+            (*out)[i] = i < lit ? c : c * 25;
+          }
+          out->write_state(id(status_led_ring));
+
+  # Update fehlgeschlagen/abgebrochen: zurück zum Modus von HA (bzw. Setup, falls der AP offen ist).
+  - id: status_update_failed
+    mode: restart
+    then:
+      - lambda: |-
+          id(status_ota) = false;
+          id(status_setup) = false;
+          id(status_active) = false;
+      - script.execute: led_restore
