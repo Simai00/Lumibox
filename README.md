@@ -77,9 +77,9 @@ Zwei Teile werden aktualisiert: die **Integration** (läuft in Home Assistant) u
 
 **Reihenfolge:** Zuerst die Firmware der Box aktualisieren, dann die Integration, aber nur, wenn die Release Notes es verlangen. Innerhalb derselben Hauptversion (z. B. 1.x) bleibt die Integration mit älterer Firmware kompatibel.
 
-### Integration (über HACS)
+### Integration (über den Marketplace)
 
-HACS zeigt ein verfügbares Update an. Dort "Aktualisieren" wählen und Home Assistant neu starten. Die Release Notes stehen auf der GitHub-Seite des Projekts unter "Releases".
+Der Marketplace (ehemals HACS) zeigt ein verfügbares Update an. Dort "Aktualisieren" wählen und Home Assistant neu starten. Die Release Notes stehen auf der GitHub-Seite des Projekts unter "Releases".
 
 ### Firmware der Box
 
@@ -96,7 +96,7 @@ HACS zeigt ein verfügbares Update an. Dort "Aktualisieren" wählen und Home Ass
 
 ## Installation (für den Einrichtenden)
 
-1. **Integration:** HACS › Menü › "Benutzerdefinierte Repositories", `https://github.com/Simai00/lumibox` mit Kategorie "Integration" hinzufügen, "Lumibox" installieren und Home Assistant neu starten. Manuell geht auch: Den Ordner `custom_components/lumibox` nach `custom_components` kopieren.
+1. **Integration:** Marketplace (ehemals HACS) › Menü › "Benutzerdefinierte Repositories", `https://github.com/Simai00/lumibox` mit Kategorie "Integration" hinzufügen, "Lumibox" installieren und Home Assistant neu starten. Manuell geht auch: Den Ordner `custom_components/lumibox` nach `custom_components` kopieren.
 2. **Firmware per USB flashen:** Für alle Boxen gilt dieselbe Firmware. Die Datei `lumibox-<Version>.factory.bin` aus dem neuesten [Release](https://github.com/Simai00/lumibox/releases) per USB-Kabel auf den ESP32 schreiben (z. B. mit [web.esphome.io](https://web.esphome.io)) oder `esphome/lumibox.yaml` im ESPHome Builder installieren. Der Gerätename entsteht automatisch aus `lumibox` und einem Teil der MAC-Adresse (z. B. `lumibox-1a2b3c`), eine eigene Kopie pro Box ist nicht nötig.
 3. **WLAN:** Die Box öffnet das Setup-WLAN **"Lumibox Setup"**. Damit verbinden und im Captive Portal das Heim-WLAN eintragen.
 4. **Box in Home Assistant hinzufügen:** Home Assistant findet die Box als ESPHome-Gerät. Mit einer aktuellen Home-Assistant-Version setzt HA den Schlüssel automatisch, es muss keiner eingegeben werden; ältere Versionen verbinden unverschlüsselt.
@@ -156,5 +156,5 @@ HACS zeigt ein verfügbares Update an. Dort "Aktualisieren" wählen und Home Ass
 - Tests: `bash scripts/test.sh -q` (Docker, baut ein Testimage). Firmware-Konfiguration prüfen: `bash scripts/esphome-config.sh lumibox.yaml`.
 - **Release:** `bash scripts/bump-version.sh X.Y.Z` setzt die Version in Integration und Firmware, danach committen, `git tag vX.Y.Z` und den Tag pushen. Die Pipeline prüft die Versionen, baut die Firmware, erstellt das GitHub-Release mit `*.factory.bin`, `*.ota.bin` und automatischen Release Notes und veröffentlicht danach `/firmware/manifest.json` auf GitHub Pages, woher die Boxen ihre Updates holen.
 - **Einmalig im GitHub-Repo:** Settings › Pages › Source auf "GitHub Actions" stellen. Unter Settings › Environments › `github-pages` eine Deployment-Regel für Tags `v*` hinzufügen, sonst wird das Deployment aus dem Tag-Lauf abgelehnt.
-- **HACS-Voraussetzungen im Repo:** Beschreibung, Topics und Releases müssen gesetzt sein. Nach der Veröffentlichung prüfen, ob `topics`/`description` im HACS-Check (`.github/workflows/ci.yml`) ohne Ausnahme durchlaufen; `brands` kann nötig bleiben.
+- **Marketplace-Voraussetzungen im Repo:** Beschreibung, Topics und Releases müssen gesetzt sein. Nach der Veröffentlichung prüfen, ob `topics`/`description` im HACS-Check (`.github/workflows/ci.yml`) ohne Ausnahme durchlaufen; `brands` kann nötig bleiben.
 - Die Marken-Icons der Integration liegen in `custom_components/lumibox/brand/`.
