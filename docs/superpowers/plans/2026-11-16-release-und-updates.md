@@ -249,16 +249,17 @@ Diese Schritte macht der Nutzer selbst. Der Umsetzer hilft dabei, führt aber ni
 3. **GitHub:**
    - Repo in `lumibox` umbenennen;
    - Beschreibung und Topics setzen (`home-assistant`, `hacs`, `esphome`, `nfc`);
+   - Repo auf **public** stellen (zuerst, denn Pages auf privaten Repos braucht einen bezahlten Plan);
    - Pages mit Quelle „GitHub Actions“ aktivieren;
-   - Settings › Environments › github-pages › Deployment branches and tags: Regel für Tags `v*` hinzufügen (sonst scheitert das Deploy bei Tag-Läufen);
-   - Repo auf **public** stellen.
+   - Settings › Environments › github-pages › Deployment branches and tags: Regel für Tags `v*` hinzufügen (sonst scheitert das Deploy bei Tag-Läufen).
 4. **Release:** `git tag v0.2.0 && git push origin v0.2.0`. Danach prüfen, ob `https://simai00.github.io/lumibox/firmware/manifest.json` erreichbar ist und ob das Release Assets hat.
 5. **Pro Box:**
-   1. Firmware per USB oder OTA aus dem Builder flashen.
-   2. Das alte ESPHome-Gerät in HA löschen und die Box neu hinzufügen. Prüfen, ob HA den Schlüssel setzt: Die Verbindung ist verschlüsselt, im Config Entry steht `noise_psk`.
-   3. Prüfen, dass die Entität „Firmware“ die Version 0.2.0 zeigt.
+   1. Firmware flashen. Hauptweg ist USB (`lumibox-0.2.0.factory.bin`, z. B. mit web.esphome.io). OTA aus dem Builder zielt auf `lumibox.local` statt auf den alten Gerätenamen und scheitert daher. Falls OTA gewünscht: `esphome run lumibox.yaml --device <alte IP der Box>`.
+   2. Mit dem WLAN „Lumibox Setup“ verbinden und im Captive Portal das Heim-WLAN eintragen (die alte Firmware hatte die WLAN-Zugangsdaten fest eingebaut, die neue hat keine).
+   3. In HA unter „Einstellungen › Geräte & Dienste › ESPHome“ den Eintrag der alten Box löschen. Danach die neu entdeckte `lumibox-xxxxxx` hinzufügen. HA setzt den Schlüssel selbst; prüfen, dass die Verbindung verschlüsselt ist (im Config Entry steht `noise_psk`).
+   4. Prüfen, dass die Entität „Firmware“ die Version 0.2.0 zeigt.
 6. **Integration:**
    - Die neue Integration über HACS installieren und die Boxen und Figuren neu anlegen;
    - `home_tonie` entfernen;
    - prüfen, dass kein Reparatur-Hinweis offen ist.
-7. **Update-Pfad testen:** `bump-version.sh 0.2.1`, dann ein Tag. In HA erscheint das Firmware-Update, Installieren klappt, und danach steht die Version 0.2.1 in den Geräteinfos.
+7. **Update-Pfad testen:** `bash scripts/bump-version.sh 0.2.1 && git commit -am "chore: Version 0.2.1" && git push && git tag v0.2.1 && git push origin v0.2.1`. In HA erscheint das Firmware-Update, Installieren klappt, und danach steht die Version 0.2.1 in den Geräteinfos.

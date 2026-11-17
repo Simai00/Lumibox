@@ -92,13 +92,14 @@ HACS zeigt ein verfügbares Update an. Dort "Aktualisieren" wählen und Home Ass
 1. Ist die Box eingeschaltet und im WLAN? Ohne WLAN und Internet kann sie die Firmware nicht herunterladen (sie kommt von GitHub Pages).
 2. Einstellungen (ganz oben erscheint das Update) bzw. Einstellungen › System › Updates: Die Liste neu laden ("Nach Updates suchen"). Die Box prüft von sich aus alle 6 Stunden.
 3. Die Box neu starten (Strom trennen und wieder anstecken) und erneut versuchen.
+4. Erscheint beim Installieren ein Fehler, kurz danach erneut nach Updates suchen und nochmals installieren. Online bleibt nur die neueste Firmware; ein Update, das Stunden vor einem neueren Release angeboten wurde, kann auf eine entfernte Datei zeigen.
 
 ## Installation (für den Einrichtenden)
 
 1. **Integration:** HACS › Menü › "Benutzerdefinierte Repositories", `https://github.com/Simai00/lumibox` mit Kategorie "Integration" hinzufügen, "Lumibox" installieren und Home Assistant neu starten. Manuell geht auch: Den Ordner `custom_components/lumibox` nach `custom_components` kopieren.
 2. **Firmware per USB flashen:** Für alle Boxen gilt dieselbe Firmware. Die Datei `lumibox-<Version>.factory.bin` aus dem neuesten [Release](https://github.com/Simai00/lumibox/releases) per USB-Kabel auf den ESP32 schreiben (z. B. mit [web.esphome.io](https://web.esphome.io)) oder `esphome/lumibox.yaml` im ESPHome Builder installieren. Der Gerätename entsteht automatisch aus `lumibox` und einem Teil der MAC-Adresse (z. B. `lumibox-1a2b3c`), eine eigene Kopie pro Box ist nicht nötig.
 3. **WLAN:** Die Box öffnet das Setup-WLAN **"Lumibox Setup"**. Damit verbinden und im Captive Portal das Heim-WLAN eintragen.
-4. **Box in Home Assistant hinzufügen:** Home Assistant findet die Box als ESPHome-Gerät. Beim Hinzufügen setzt Home Assistant den API-Schlüssel automatisch, es muss keiner eingegeben werden.
+4. **Box in Home Assistant hinzufügen:** Home Assistant findet die Box als ESPHome-Gerät. Mit einer aktuellen Home-Assistant-Version setzt HA den Schlüssel automatisch, es muss keiner eingegeben werden; ältere Versionen verbinden unverschlüsselt.
 5. **In der Integration einrichten:** siehe Einrichtung.
 
 **Eigene Firmware-Anpassung:** Im ESPHome Builder erscheint die Box als "Übernehmen" (`dashboard_import`). Damit lässt sich die Konfiguration übernehmen und anpassen.
@@ -144,7 +145,7 @@ HACS zeigt ein verfügbares Update an. Dort "Aktualisieren" wählen und Home Ass
 ## Hinweise und Fehlersuche
 
 - **Platine ausgetauscht:** Der Gerätename enthält einen Teil der MAC-Adresse und bleibt für dieselbe Hardware gleich. Eine ausgetauschte Platine ist ein neues Gerät: Sie in Home Assistant zur ESPHome-Integration hinzufügen und in der Box-Konfiguration von Lumibox neu auswählen.
-- **Sicherheit des Rettungswegs:** Die Firmware enthält einen zusätzlichen ESPHome-OTA-Zugang (`ota: esphome`) ohne Passwort als Rettungsweg. Wer im selben WLAN ist, könnte darüber eine Firmware auf die Box laden. Die API zu Home Assistant ist davon getrennt und mit dem von Home Assistant gesetzten Schlüssel verschlüsselt. Die Box daher nur in einem vertrauenswürdigen WLAN betreiben.
+- **Sicherheit des Rettungswegs:** Die Firmware enthält einen zusätzlichen ESPHome-OTA-Zugang (`ota: esphome`) ohne Passwort als Rettungsweg. Wer im selben WLAN ist, könnte darüber eine Firmware auf die Box laden. Die API zu Home Assistant ist davon getrennt und mit dem von Home Assistant gesetzten Schlüssel verschlüsselt (bei einer aktuellen Home-Assistant-Version, sonst unverschlüsselt). Ist das Heim-WLAN nicht erreichbar, öffnet die Box ausserdem das offene Setup-WLAN; wer physisch in der Nähe ist, könnte sie dann umkonfigurieren und flashen. Das ist für ein Spielzeug zu Hause ein akzeptiertes Risiko. Die Box daher nur in einem vertrauenswürdigen WLAN betreiben.
 - **Keine Events im Ereignis-Monitor:** Als Fehlersuche in den Optionen des ESPHome-Geräts "Allow the device to perform Home Assistant actions" aktivieren. Normalerweise ist das nicht nötig.
 - **Helligkeit im Haltemodus:** Sie ist bewusst niedrig (10 % bei 50 % Gesamtbegrenzung) und kann in `esphome/lumibox.yaml` angepasst werden.
 - **Spotify-Kurzlinks** (`spotify.link`) werden nicht unterstützt. Den vollständigen Link `open.spotify.com/...` oder die URI `spotify:...` verwenden.
@@ -155,5 +156,5 @@ HACS zeigt ein verfügbares Update an. Dort "Aktualisieren" wählen und Home Ass
 - Tests: `bash scripts/test.sh -q` (Docker, baut ein Testimage). Firmware-Konfiguration prüfen: `bash scripts/esphome-config.sh lumibox.yaml`.
 - **Release:** `bash scripts/bump-version.sh X.Y.Z` setzt die Version in Integration und Firmware, danach committen, `git tag vX.Y.Z` und den Tag pushen. Die Pipeline prüft die Versionen, baut die Firmware, erstellt das GitHub-Release mit `*.factory.bin`, `*.ota.bin` und automatischen Release Notes und veröffentlicht danach `/firmware/manifest.json` auf GitHub Pages, woher die Boxen ihre Updates holen.
 - **Einmalig im GitHub-Repo:** Settings › Pages › Source auf "GitHub Actions" stellen. Unter Settings › Environments › `github-pages` eine Deployment-Regel für Tags `v*` hinzufügen, sonst wird das Deployment aus dem Tag-Lauf abgelehnt.
-- **HACS-Voraussetzungen im Repo:** Beschreibung, Topics und Releases müssen gesetzt sein. Nach der Veröffentlichung können die Ausnahmen `ignore: brands topics description` des HACS-Checks in `.github/workflows/ci.yml` entfernt werden.
+- **HACS-Voraussetzungen im Repo:** Beschreibung, Topics und Releases müssen gesetzt sein. Nach der Veröffentlichung prüfen, ob `topics`/`description` im HACS-Check (`.github/workflows/ci.yml`) ohne Ausnahme durchlaufen; `brands` kann nötig bleiben.
 - Die Marken-Icons der Integration liegen in `custom_components/lumibox/brand/`.
