@@ -84,12 +84,17 @@ def _esphome_device(hass, mac: str, device_name: str, name: str) -> dr.DeviceEnt
     )
 
 
-def add_esphome_entity(hass, device: dr.DeviceEntry, state: str = "on") -> str:
-    """ESPHome-Entität am Gerät registrieren und State setzen; liefert die entity_id."""
+def add_esphome_entity(
+    hass, device: dr.DeviceEntry, state: str = "on", unique_id: str | None = None
+) -> str:
+    """ESPHome-Entität am Gerät registrieren und State setzen; liefert die entity_id.
+
+    Ohne `unique_id` entsteht eine native Entität der Firmware ("{id}-binary_sensor-status").
+    """
     entry = er.async_get(hass).async_get_or_create(
         "binary_sensor",
         "esphome",
-        f"{device.id}_status",
+        unique_id or f"{device.id}-binary_sensor-status",
         device_id=device.id,
         suggested_object_id=f"{device.name.lower().replace(' ', '_')}_status",
     )

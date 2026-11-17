@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 
+from .connection import is_device_entity
 from .const import DOMAIN
 
 
@@ -53,17 +54,15 @@ class FirmwareUpdateFlow(RepairsFlow):
     def _update_entity_id(self) -> str | None:
         """Eigene Update-Entität der Box mit verfügbarem Update (bevorzugt `on`).
 
-        Die ESPHome-Dashboard-Entität hat die reine MAC als unique_id (ohne "-") und
-        gehört nicht zur Firmware der Box; sie wird übersprungen. Native unique_ids sind
-        v1/v2 "{mac}-{typ}-{name}" oder v3 "{mac}/{geraet}/{typ}/{name}", enthalten also
-        "-" oder "/" (die MAC allein hat beides nicht).
+        Die ESPHome-Dashboard-Entität gehört nicht zur Firmware der Box und wird
+        übersprungen (siehe `is_device_entity`).
         """
         candidates = [
             entry.entity_id
             for entry in er.async_entries_for_device(er.async_get(self.hass), self._device_id)
             if entry.domain == "update"
             and entry.platform == "esphome"
-            and ("-" in entry.unique_id or "/" in entry.unique_id)
+            and is_device_entity(entry.unique_id)
         ]
         for entity_id in candidates:
             state = self.hass.states.get(entity_id)

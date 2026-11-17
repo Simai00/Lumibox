@@ -97,8 +97,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: LumiboxConfigEntry) -> b
         )
         data.connections[config.subentry_id] = BoxConnection(hass, config.esphome_device_id)
     entry.runtime_data = data
-    for connection in data.connections.values():
-        await connection.async_start()
     entry.async_on_unload(
         async_setup_firmware_checks(hass, [c.config for c in data.controllers.values()])
     )
@@ -145,6 +143,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: LumiboxConfigEntry) -> b
 
     # on_unload-Callbacks laufen in umgekehrter Reihenfolge: erst Listener abmelden, dann Shutdown.
     entry.async_on_unload(_async_shutdown)
+    # Shutdown ist registriert, bevor die Verbindungen starten: auch ein späterer Fehler
+    # im Setup lässt keine Listener zurück.
+    for connection in data.connections.values():
+        await connection.async_start()
     entry.async_on_unload(hass.bus.async_listen(EVENT_TYPE, _on_event))
     entry.async_on_unload(
         entry.add_update_listener(partial(_async_update_listener, _box_snapshot(entry)))

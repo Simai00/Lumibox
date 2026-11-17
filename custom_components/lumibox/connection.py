@@ -15,6 +15,16 @@ _LOGGER = logging.getLogger(__name__)
 ESPHOME_PLATFORM = "esphome"
 
 
+def is_device_entity(unique_id: str) -> bool:
+    """True für Entitäten der Box-Firmware, False für die ESPHome-Dashboard-Entität.
+
+    Die Dashboard-Update-Entität hat die reine MAC als unique_id und bleibt nach einem
+    erwarteten Verbindungsabbruch verfügbar. Native unique_ids sind v1/v2
+    "{mac}-{typ}-{name}" oder v3 "{mac}/{geraet}/{typ}/{name}", enthalten also "-" oder "/".
+    """
+    return "-" in unique_id or "/" in unique_id
+
+
 class BoxConnection:
     """Verbunden = mindestens eine ESPHome-Entität des Geräts ist nicht `unavailable`.
 
@@ -68,7 +78,7 @@ class BoxConnection:
         return frozenset(
             entry.entity_id
             for entry in er.async_entries_for_device(registry, self._device_id)
-            if entry.platform == ESPHOME_PLATFORM
+            if entry.platform == ESPHOME_PLATFORM and is_device_entity(entry.unique_id)
         )
 
     def _compute(self) -> bool:

@@ -95,3 +95,17 @@ async def test_subentry_removal_cleans_up(hass, two_boxes_entry):
     hass.states.async_set(boxes.anna_status, STATE_UNAVAILABLE)
     await hass.async_block_till_done()
     assert hass.states.get(_connected(hass, boxes, "Ben")).state == STATE_ON
+
+
+async def test_dashboard_entity_does_not_count_as_connected(hass, loaded_entry_with_box, esphome_device):
+    sub = next(iter(loaded_entry_with_box.subentries.values()))
+    entity_id = _entity_id(hass, "binary_sensor", sub.subentry_id, "connected")
+
+    # Dashboard-Update-Entität: unique_id ist die reine MAC, bleibt verfügbar.
+    add_esphome_entity(hass, esphome_device, unique_id="aabbccddee01")
+    await hass.async_block_till_done()
+    assert hass.states.get(entity_id).state == STATE_OFF
+
+    add_esphome_entity(hass, esphome_device)
+    await hass.async_block_till_done()
+    assert hass.states.get(entity_id).state == STATE_ON
