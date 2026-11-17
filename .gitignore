@@ -15,3 +15,7 @@ __pycache__/
 
 # Lokale Docker-Testumgebung
 dev/
+
+# Interne Planungsdokumente und Claude-Setup (lokal, nicht veröffentlicht)
+docs/superpowers/
+.claude/

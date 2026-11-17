@@ -58,7 +58,7 @@ Box (ESPHome) --Events--> Home Assistant (lumibox) --> Music Assistant --> Lauts
 Box (ESPHome) <--set_led-- Home Assistant
 ```
 
-Details: [Design-Spezifikation](docs/superpowers/specs/2026-11-13-home-tonie-integration-design.md).
+Details: [Architektur](docs/architektur.md).
 
 ## Voraussetzungen
 
