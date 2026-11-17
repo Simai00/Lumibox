@@ -74,18 +74,18 @@ Die Box zeigt ihre Zustände selbst an, auch ohne Home Assistant. Diese Muster k
 | Zustand | Muster | Wann / wie lange |
 | :--- | :--- | :--- |
 | Startet / verbindet | weiss, langsam atmend | ab Boot bis HA verbunden, höchstens ~60 s |
-| Bereit | grün einmal rundherum füllen, dann aus | ~1,5 s, sobald HA verbunden ist (nach Boot und nach Wiederverbindung) |
+| Bereit | grün einmal rundherum füllen, danach wieder der letzte Modus von HA | ~1,5 s, sobald HA verbunden ist (nach Boot und nach Wiederverbindung) |
 | Setup-WLAN aktiv | blau, langsam atmend | dauerhaft, solange der AP „Lumibox Setup“ offen ist und noch keine WLAN-Daten gespeichert sind |
 | Firmware-Update | cyan Füllstand = Fortschritt | dauerhaft während des Updates |
 | Kein WLAN | rot, 2× langsam pulsieren | ~4 s |
 | WLAN ja, HA nein | orange, 2× langsam pulsieren | ~4 s |
 | NFC-Leser defekt | magenta, 2× langsam pulsieren | ~4 s |
 
-- **Fehler zeigen:** Nach dem Start (wenn die Startphase ohne HA-Verbindung endet) und bei jeder Bedienung (Figur, Taster, Encoder), solange der Fehler besteht. Danach LED aus. Ein Verbindungsverlust im Betrieb wird nicht von selbst angezeigt (kein dauerhaftes Fehlerleuchten), erst bei der nächsten Bedienung.
+- **Fehler zeigen:** Nach dem Start (wenn die Startphase ohne HA-Verbindung endet) und bei jeder Bedienung (Figur, Taster, Encoder), solange die Box nicht mit HA verbunden ist (kein WLAN bzw. WLAN ohne HA). Danach stellt die Box den letzten Modus von HA wieder her (z. B. den Spinner); „aus“ nur, wenn der letzte Modus `off` war. Ein Verbindungsverlust im Betrieb wird nicht von selbst angezeigt (kein dauerhaftes Fehlerleuchten): Die LED bleibt, wie sie war, erst bei der nächsten Bedienung erscheint der Fehler.
 - **Setup-WLAN vs. Kein WLAN:** Blau atmend gibt es nur, wenn die Box noch keine WLAN-Daten gespeichert hat. Ist das bekannte WLAN weg (der Fallback-AP ist offen), gilt das als Fehler „Kein WLAN“.
-- **NFC-Leser defekt** wird nur nach dem Start (nach „Bereit“ bzw. nach dem Start-Timeout) gezeigt, nicht bei jeder Bedienung.
+- **NFC-Leser defekt** (magenta) zeigt die Box nach jedem „Bereit“ (nach dem Start und nach jeder Wiederverbindung), nach dem Start-Timeout und bei einer Bedienung, solange HA nicht verbunden ist (nach Rot bzw. Orange). Bei einer Bedienung mit bestehender HA-Verbindung nicht.
 - **Fehler-Priorität:** Kein WLAN vor „WLAN ja, HA nein“.
-- **Vorrang:** Lokale Anzeigen (Start, Setup, Update, Fehler) haben Vorrang vor `set_led`. Ein `set_led` währenddessen wird gemerkt und danach wiederhergestellt.
+- **Vorrang:** Lokale Anzeigen (Start, Setup, Update, Fehler) haben Vorrang vor `set_led`. Währenddessen werden nur die Dauer-Modi (`off`, `loading`, `playing`, `hold`) gemerkt und danach wiederhergestellt; kurze Anzeigen (`volume`, `unknown`, `error`, `paused`) werden verworfen (`paused`, `unknown` und `error` setzen den Dauer-Modus auf `off`).
 
 ## Integration (`custom_components/lumibox`)
 

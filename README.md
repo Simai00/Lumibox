@@ -124,7 +124,7 @@ Der Marketplace (ehemals HACS) zeigt ein verfügbares Update an. Dort "Aktualisi
 | rot, 3× blinkend | Unbekannte Figur |
 | rot, ca. 3 s | Fehler bei der Wiedergabe |
 
-Fehler zeigt die Box nach dem Start und kurz bei jeder Bedienung (Figur auflegen, Taster, Encoder), nicht dauerhaft. Fällt die Verbindung im Betrieb weg, bleibt die LED zunächst dunkel; der Fehler erscheint bei der nächsten Bedienung.
+Fehler zeigt die Box nach dem Start und kurz bei jeder Bedienung (Figur auflegen, Taster, Encoder), aber nur, solange sie keine Verbindung zu Home Assistant hat (kein WLAN bzw. WLAN ohne Home Assistant), nicht dauerhaft. Danach kehrt die LED zum letzten Zustand zurück (z. B. dem laufenden Spinner). Fällt die Verbindung im Betrieb weg, bleibt die LED zunächst, wie sie war; der Fehler erscheint bei der nächsten Bedienung. Der defekte NFC-Leser (magenta) erscheint nach jedem „Bereit“ (Start und Wiederverbindung) und bei einer Bedienung ohne Verbindung zu Home Assistant.
 
 In Home Assistant zeigt der Sensor **„Verbunden“** beim Gerät der Box, ob sie erreichbar ist. Ist sie es nicht, stehen ihre Lumibox-Sensoren auf „Nicht verfügbar“.
 
