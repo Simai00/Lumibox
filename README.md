@@ -4,8 +4,6 @@
 
 Eine quelloffene, physische Audio-Steuerbox auf Basis eines ESP32, ESPHome und Home Assistant. Audio-Box mit NFC-Figuren für kleine Kinder: Das Auflegen und Abheben von mit NFC-Tags versehenen 3D-Druck-Figuren steuert die Musik- und Hörspielwiedergabe auf beliebigen vernetzten Smart Speakern.
 
-Das Projekt ist unabhängig und nicht mit der Boxine GmbH (tonies) verbunden. Es steht unter der [MIT-Lizenz](LICENSE).
-
 ## Hardware
 
 | Komponente | Spezifikation / Modell | Zweck |
@@ -22,26 +20,26 @@ Das Projekt ist unabhängig und nicht mit der Boxine GmbH (tonies) verbunden. Es
 | **Netzteil** | USB-C, 5 V, mind. 2 A | Versorgung der gesamten Box |
 
 
-| ESP32-Pin | Komponente | Modul-Pin |
+| Komponente | Modul-Pin | ESP32-Pin |
 | :--- | :--- | :--- |
-| GPIO 16 | PN532 NFC | SS (CS) |
-| GPIO 18 | PN532 NFC | SCK |
-| GPIO 19 | PN532 NFC | MISO |
-| GPIO 21 (über 330–470 Ω, optional via 74AHCT125) | WS2812B Ring | DI (Data In) |
-| GPIO 23 | PN532 NFC | MOSI |
-| GPIO 25 | KY-040 Encoder | SW (Taster) |
-| GPIO 26 | Button Zurück | Kontakt 1 |
-| GPIO 27 | Button Weiter | Kontakt 1 |
-| GPIO 32 | KY-040 Encoder | CLK |
-| GPIO 33 | KY-040 Encoder | DT |
-| 3V3 | PN532 NFC | VCC |
-| 3V3 | KY-040 Encoder | + (VCC) |
-| 5V (oder VIN) | WS2812B Ring | 5V (VCC) |
-| GND | PN532 NFC | GND |
-| GND | KY-040 Encoder | GND |
-| GND | Button Zurück | Kontakt 2 |
-| GND | Button Weiter | Kontakt 2 |
-| GND | WS2812B Ring | GND |
+| PN532 NFC | SS (CS) | GPIO 16 |
+| PN532 NFC | SCK | GPIO 18 |
+| PN532 NFC | MISO | GPIO 19 |
+| PN532 NFC | MOSI | GPIO 23 |
+| PN532 NFC | VCC | 3V3 |
+| PN532 NFC | GND | GND |
+| WS2812B Ring | DI (Data In) | GPIO 21 (über 330–470 Ω, optional via 74AHCT125) |
+| WS2812B Ring | 5V (VCC) | 5V (oder VIN) |
+| WS2812B Ring | GND | GND |
+| KY-040 Encoder | SW (Taster) | GPIO 25 |
+| KY-040 Encoder | CLK | GPIO 32 |
+| KY-040 Encoder | DT | GPIO 33 |
+| KY-040 Encoder | + (VCC) | 3V3 |
+| KY-040 Encoder | GND | GND |
+| Button Zurück | Kontakt 1 | GPIO 26 |
+| Button Zurück | Kontakt 2 | GND |
+| Button Weiter | Kontakt 1 | GPIO 27 |
+| Button Weiter | Kontakt 2 | GND |
 
 ### Hinweise zum LED-Ring
 
