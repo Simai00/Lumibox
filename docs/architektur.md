@@ -113,7 +113,7 @@ Die Box zeigt ihre Zustände selbst an, auch ohne Home Assistant. Diese Muster k
 
 ### Sensor „Verbunden“
 
-Pro Box gibt es einen Binary-Sensor „Verbunden“. Er ist an, solange das ESPHome-Gerät der Box erreichbar ist. Ist die Box nicht verbunden, sind ihre Lumibox-Sensoren „nicht verfügbar“ (statt „unbekannt“, was wie „keine Figur“ aussähe).
+Pro Box gibt es einen Binary-Sensor „Verbunden“. Er ist an, solange das ESPHome-Gerät der Box erreichbar ist. Ist die Box nicht verbunden, sind ihre Lumibox-Sensoren „nicht verfügbar“. Ohne aufgelegte Figur zeigt „Aktuelle Figur“ den Zustand `none` (angezeigt als „Keine“).
 
 ### Verhalten pro Box
 
