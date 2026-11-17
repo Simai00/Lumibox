@@ -216,6 +216,13 @@ async def test_issue_stays_after_update_started(hass):
     issue_id = f"firmware_outdated_{sub.subentry_id}"
     result = await manager.async_init(DOMAIN, context={"issue_id": issue_id})
     assert result["step_id"] == "confirm"
+    # Der Bestätigungsschritt trägt den Text des Hinweises (hassfest: kein eigener Text).
+    assert result["description_placeholders"] == {
+        "box": "Anna",
+        "current": "?",
+        "device": "Lumibox Anna",
+        "required": MIN_FIRMWARE_VERSION,
+    }
     result = await manager.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "update_started"

@@ -9,12 +9,16 @@ from homeassistant.components.repairs import RepairsFlow
 from homeassistant.const import STATE_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import issue_registry as ir
+
+from .const import DOMAIN
 
 
 class FirmwareUpdateFlow(RepairsFlow):
     """Bestätigung, dann Update der Box starten."""
 
-    def __init__(self, device_id: str) -> None:
+    def __init__(self, issue_id: str, device_id: str) -> None:
+        self._issue_id = issue_id
         self._device_id = device_id
 
     async def async_step_init(
@@ -26,7 +30,15 @@ class FirmwareUpdateFlow(RepairsFlow):
         self, user_input: dict[str, str] | None = None
     ) -> data_entry_flow.FlowResult:
         if user_input is None:
-            return self.async_show_form(step_id="confirm")
+            # Ein Hinweis mit Knopf hat keinen eigenen Beschreibungstext (hassfest);
+            # Box, Versionen und Gerät stehen deshalb im Bestätigungsschritt.
+            issue = ir.async_get(self.hass).async_get_issue(DOMAIN, self._issue_id)
+            return self.async_show_form(
+                step_id="confirm",
+                description_placeholders=dict(issue.translation_placeholders or {})
+                if issue
+                else None,
+            )
         entity_id = self._update_entity_id()
         if entity_id is None:
             return self.async_abort(reason="no_update")
@@ -64,4 +76,4 @@ async def async_create_fix_flow(
     hass: HomeAssistant, issue_id: str, data: dict[str, str | int | float | None] | None
 ) -> RepairsFlow:
     """Fix-Flow für `firmware_outdated_*`."""
-    return FirmwareUpdateFlow(cast(str, (data or {})["device_id"]))
+    return FirmwareUpdateFlow(issue_id, cast(str, (data or {})["device_id"]))
