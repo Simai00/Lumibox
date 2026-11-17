@@ -1,6 +1,10 @@
+<p align="center"><img src="docs/assets/lumibox-logo.png" alt="Lumibox" width="160"></p>
+
 # Lumibox
 
 Eine quelloffene, physische Audio-Steuerbox auf Basis eines ESP32, ESPHome und Home Assistant. Audio-Box mit NFC-Figuren für kleine Kinder: Das Auflegen und Abheben von mit NFC-Tags versehenen 3D-Druck-Figuren steuert die Musik- und Hörspielwiedergabe auf beliebigen vernetzten Smart Speakern.
+
+Das Projekt ist unabhängig und nicht mit der Boxine GmbH (tonies) verbunden. Es steht unter der [MIT-Lizenz](LICENSE).
 
 ## Hardware
 
@@ -67,29 +71,43 @@ Details: [Design-Spezifikation](docs/superpowers/specs/2026-11-13-home-tonie-int
   - **einem Music-Assistant-Benutzer pro Kind** (z. B. `anna`, `ben`). Der Anbieterfilter des Benutzers erlaubt nur den Spotify-Account dieses Kindes.
 - Die **ESPHome-Integration** in Home Assistant.
 
-## Installation
+## Updates im Alltag
 
-**Über HACS:** HACS, Menü, "Benutzerdefinierte Repositories", `https://github.com/Simai00/lumibox` mit Kategorie "Integration" hinzufügen, "Lumibox" installieren und Home Assistant neu starten.
+Zwei Teile werden aktualisiert: die **Integration** (läuft in Home Assistant) und die **Firmware** (läuft auf der Box). Du brauchst dafür kein ESPHome-Wissen.
 
-**Manuell:** Den Ordner `custom_components/lumibox` in das Verzeichnis `custom_components` der Home-Assistant-Konfiguration kopieren und Home Assistant neu starten.
+**Reihenfolge:** Zuerst die Firmware der Box aktualisieren, dann die Integration, aber nur, wenn die Release Notes es verlangen. Innerhalb derselben Hauptversion (z. B. 1.x) bleibt die Integration mit älterer Firmware kompatibel.
 
-## Firmware flashen
+### Integration (über HACS)
 
-Die komplette Firmware einer Box steht in einer einzigen Datei: `esphome/lumibox.yaml` (Gerätename `lumibox`).
+HACS zeigt ein verfügbares Update an. Dort "Aktualisieren" wählen und Home Assistant neu starten. Die Release Notes stehen auf der GitHub-Seite des Projekts unter "Releases".
 
-1. **Weitere Box:** Die Datei kopieren (z. B. `lumibox-carla.yaml`, oder im ESPHome Builder als neues Gerät einfügen) und darin anpassen:
-   - `esphome: name` und `friendly_name` (z. B. `lumibox-carla` / `Lumibox Carla`), jeder Gerätename nur einmal;
-   - `wifi: ap: ssid` (Fallback-WLAN, z. B. `Lumibox Carla Setup`).
-2. Die Konfiguration prüfen (benötigt Docker): `bash scripts/esphome-config.sh lumibox.yaml`
-3. Mit ESPHome flashen und die Box in Home Assistant zur ESPHome-Integration hinzufügen. Die Firmware enthält keine Zugangsdaten: WLAN richtest du über das Setup-WLAN "Lumibox Setup" ein, den API-Schlüssel setzt Home Assistant beim ersten Verbinden.
+### Firmware der Box
+
+- Jede Box hat in Home Assistant eine Update-Entität **"Firmware"** (Einstellungen, Geräte & Dienste, Gerät der Box). Gibt es eine neue Version, dort auf "Installieren" drücken. Die Box lädt die Firmware selbst herunter und startet danach neu. Das dauert einige Minuten.
+- Ist eine Box für die installierte Integration **zu alt**, erscheint in Home Assistant unter Einstellungen, Reparaturen, ein Hinweis. Mit **"Jetzt aktualisieren"** startet das Update direkt aus dem Hinweis. Der Hinweis verschwindet, sobald die neue Firmware läuft.
+- Während des Updates die Box nicht vom Strom trennen.
+
+### Wenn das Update nicht startet
+
+1. Ist die Box eingeschaltet und im WLAN? Ohne WLAN und Internet kann sie die Firmware nicht herunterladen (sie kommt von GitHub Pages).
+2. Einstellungen, Geräte & Dienste, Updates: Die Liste neu laden ("Nach Updates suchen"). Die Box prüft von sich aus alle 6 Stunden.
+3. Die Box neu starten (Strom trennen und wieder anstecken) und erneut versuchen.
+
+## Installation (für den Einrichtenden)
+
+1. **Integration:** HACS, Menü, "Benutzerdefinierte Repositories", `https://github.com/Simai00/lumibox` mit Kategorie "Integration" hinzufügen, "Lumibox" installieren und Home Assistant neu starten. Manuell geht auch: Den Ordner `custom_components/lumibox` nach `custom_components` kopieren.
+2. **Firmware per USB flashen:** Für alle Boxen gilt dieselbe Firmware. Die Datei `lumibox-<Version>.factory.bin` aus dem neuesten [Release](https://github.com/Simai00/lumibox/releases) per USB-Kabel auf den ESP32 schreiben (z. B. mit [web.esphome.io](https://web.esphome.io)) oder `esphome/lumibox.yaml` im ESPHome Builder installieren. Der Gerätename entsteht automatisch aus `lumibox` und einem Teil der MAC-Adresse (z. B. `lumibox-1a2b3c`), eine eigene Kopie pro Box ist nicht nötig.
+3. **WLAN:** Die Box öffnet das Setup-WLAN **"Lumibox Setup"**. Damit verbinden und im Captive Portal das Heim-WLAN eintragen.
+4. **Box in Home Assistant hinzufügen:** Home Assistant findet die Box als ESPHome-Gerät. Beim Hinzufügen setzt Home Assistant den API-Schlüssel automatisch, es muss keiner eingegeben werden.
+5. **In der Integration einrichten:** siehe Einrichtung.
+
+**Eigene Firmware-Anpassung:** Im ESPHome Builder erscheint die Box als "Übernehmen" (`dashboard_import`). Damit lässt sich die Konfiguration übernehmen und anpassen.
 
 ## Einrichtung
 
 1. Einstellungen, Geräte & Dienste, Integration hinzufügen, "Lumibox".
 2. **Box hinzufügen:** Name, ESPHome-Gerät der Box, Ziel-Lautsprecher, Music-Assistant-Benutzer des Kindes, maximale Lautstärke, Schrittweite pro Encoder-Raste und Standardfarbe (vorbelegt Lila) festlegen.
 3. **Figur hinzufügen:** Name, UID des Tags und Spotify-Link (Album, Playlist, Titel, Künstler, Podcast, Folge oder Hörbuch; `https://open.spotify.com/...` oder `spotify:...`). Optional eine **Farbe**: In dieser Farbe dreht der Spinner im LED-Ring, solange die Figur spielt. Ohne eigene Farbe gilt die Standardfarbe der Box.
-
-**Wichtig:** Integration und Firmware zusammen aktualisieren. Die Integration schickt die Farbe an `set_led` mit (`r`, `g`, `b`), ältere Firmware kennt diese Felder nicht.
 
 **Figuren anlernen:** Eine unbekannte Figur auf eine Box legen. Die Box blinkt rot und Home Assistant zeigt eine Benachrichtigung mit der UID. Dann bei "Lumibox" "Figur hinzufügen" wählen: Die UID ist bereits eingetragen, es fehlen nur Name und Spotify-Link. Nach dem Speichern die Figur einmal abheben und wieder auflegen, damit sie zu spielen beginnt.
 
@@ -102,7 +120,7 @@ Die komplette Firmware einer Box steht in einer einzigen Datei: `esphome/lumibox
 4. Encoder drücken: `play_pause`. Taster GPIO26: `prev`, GPIO27: `next`. Ein Event pro Druck.
 5. `device_id` gehört zur richtigen Box (Anna bzw. Ben).
 
-**LED (Entwicklerwerkzeuge, Aktionen, `esphome.<gerätename>_set_led` (Bindestriche werden zu Unterstrichen, z. B. `esphome.lumibox_carla_set_led`), Felder `mode`, `level`, `r`, `g`, `b`):**
+**LED (Entwicklerwerkzeuge, Aktionen, `esphome.<gerätename>_set_led` (der Gerätename enthält das MAC-Suffix, Bindestriche werden zu Unterstrichen, z. B. `esphome.lumibox_1a2b3c_set_led`), Felder `mode`, `level`, `r`, `g`, `b`):**
 6. `off`: Ring aus (auch nach dem Booten).
 7. `loading`: weisser Spinner bis zum nächsten Modus.
 8. `playing` mit `r: 255, g: 0, b: 0`: Ring rot (ca. 40 %), ein hellerer roter Punkt mit Schweif dreht etwa eine Runde in 3 s, dauerhaft. Danach `volume` mit `level: 50`: nach ca. 1,5 s wieder der rote Spinner.
@@ -125,8 +143,17 @@ Die komplette Firmware einer Box steht in einer einzigen Datei: `esphome/lumibox
 
 ## Hinweise und Fehlersuche
 
-- **Gerätename geändert:** Wer `name` in der Firmware ändert, muss die Box in Home Assistant neu zur ESPHome-Integration hinzufügen und sie danach in der Box-Konfiguration von Lumibox neu auswählen.
+- **Platine ausgetauscht:** Der Gerätename enthält einen Teil der MAC-Adresse und bleibt für dieselbe Hardware gleich. Eine ausgetauschte Platine ist ein neues Gerät: Sie in Home Assistant zur ESPHome-Integration hinzufügen und in der Box-Konfiguration von Lumibox neu auswählen.
+- **Sicherheit des Rettungswegs:** Die Firmware enthält einen zusätzlichen ESPHome-OTA-Zugang (`ota: esphome`) ohne Passwort als Rettungsweg. Wer im selben WLAN ist, könnte darüber eine Firmware auf die Box laden. Die API zu Home Assistant ist davon getrennt und mit dem von Home Assistant gesetzten Schlüssel verschlüsselt. Die Box daher nur in einem vertrauenswürdigen WLAN betreiben.
 - **Keine Events im Ereignis-Monitor:** Als Fehlersuche in den Optionen des ESPHome-Geräts "Allow the device to perform Home Assistant actions" aktivieren. Normalerweise ist das nicht nötig.
 - **Helligkeit im Haltemodus:** Sie ist bewusst niedrig (10 % bei 50 % Gesamtbegrenzung) und kann in `esphome/lumibox.yaml` angepasst werden.
 - **Spotify-Kurzlinks** (`spotify.link`) werden nicht unterstützt. Den vollständigen Link `open.spotify.com/...` oder die URI `spotify:...` verwenden.
 - **Ein Stream pro Spotify-Account:** Spotify erlaubt nur eine gleichzeitige Wiedergabe pro Account. Jede Box braucht daher ihren eigenen Account und Music-Assistant-Benutzer. Zwei Boxen mit demselben Benutzer können nicht gleichzeitig spielen.
+
+## Entwicklung
+
+- Tests: `bash scripts/test.sh -q` (Docker, baut ein Testimage). Firmware-Konfiguration prüfen: `bash scripts/esphome-config.sh lumibox.yaml`.
+- **Release:** `bash scripts/bump-version.sh X.Y.Z` setzt die Version in Integration und Firmware, danach committen, `git tag vX.Y.Z` und den Tag pushen. Die Pipeline prüft die Versionen, baut die Firmware, erstellt das GitHub-Release mit `*.factory.bin`, `*.ota.bin` und automatischen Release Notes und veröffentlicht danach `/firmware/manifest.json` auf GitHub Pages, woher die Boxen ihre Updates holen.
+- **Einmalig im GitHub-Repo:** Settings, Pages, Source auf "GitHub Actions" stellen. Unter Settings, Environments, `github-pages` eine Deployment-Regel für Tags `v*` hinzufügen, sonst wird das Deployment aus dem Tag-Lauf abgelehnt.
+- **HACS-Voraussetzungen im Repo:** Beschreibung, Topics und Releases müssen gesetzt sein. Nach der Veröffentlichung können die Ausnahmen `ignore: brands topics description` des HACS-Checks in `.github/workflows/ci.yml` entfernt werden.
+- Die Marken-Icons der Integration liegen in `custom_components/lumibox/brand/`.
