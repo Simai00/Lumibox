@@ -12,6 +12,9 @@ from .box import BoxController
 from .connection import BoxConnection
 from .const import DOMAIN
 
+# Zustand ohne aufgelegte Figur; die Übersetzung zeigt „Keine“ bzw. „None“.
+NO_FIGURE = "none"
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -59,15 +62,15 @@ class _BoxSensor(SensorEntity):
 
 
 class CurrentFigureSensor(_BoxSensor):
-    """Name der aufgelegten Figur oder None."""
+    """Name der aufgelegten Figur oder „none“ (übersetzt als „Keine“)."""
 
     def __init__(self, controller: BoxController, connection: BoxConnection) -> None:
         super().__init__(controller, connection, "current_figure")
 
     @property
-    def native_value(self) -> str | None:
+    def native_value(self) -> str:
         figure = self._controller.current_figure
-        return figure.name if figure is not None else None
+        return figure.name if figure is not None else NO_FIGURE
 
 
 class LastUnknownTagSensor(_BoxSensor):

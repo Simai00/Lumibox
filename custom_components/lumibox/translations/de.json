@@ -145,7 +145,10 @@
     },
     "sensor": {
       "current_figure": {
-        "name": "Aktuelle Figur"
+        "name": "Aktuelle Figur",
+        "state": {
+          "none": "Keine"
+        }
       },
       "last_unknown_tag": {
         "name": "Letzter unbekannter Tag"

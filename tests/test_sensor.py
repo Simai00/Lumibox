@@ -39,7 +39,7 @@ async def test_sensors_registered_per_box(hass, two_boxes_entry):
             assert device.config_subentry_id == sub_id
             assert entry.translation_key == key
             state = hass.states.get(entity_id)
-            assert state.state == STATE_UNKNOWN
+            assert state.state == ("none" if key == "current_figure" else STATE_UNKNOWN)
             assert state.attributes["friendly_name"] == f"Lumibox {name} {label}"
 
 
@@ -56,7 +56,7 @@ async def test_current_figure_follows_box(hass, two_boxes_entry):
     assert hass.states.get(current).state == "Bobo"
     async_fire_time_changed_exact(hass, dt_util.utcnow() + timedelta(seconds=1.1))
     await hass.async_block_till_done()
-    assert hass.states.get(current).state == STATE_UNKNOWN
+    assert hass.states.get(current).state == "none"
 
 
 async def test_last_unknown_tag(hass, two_boxes_entry):
@@ -67,7 +67,7 @@ async def test_last_unknown_tag(hass, two_boxes_entry):
     await _fire(hass, boxes.dev_anna, "tag_on", "FF:EE")
 
     assert hass.states.get(_entity_id(hass, anna, "last_unknown_tag")).state == "FFEE"
-    assert hass.states.get(_entity_id(hass, anna, "current_figure")).state == STATE_UNKNOWN
+    assert hass.states.get(_entity_id(hass, anna, "current_figure")).state == "none"
     assert hass.states.get(_entity_id(hass, ben, "last_unknown_tag")).state == STATE_UNKNOWN
 
 

@@ -145,7 +145,10 @@
     },
     "sensor": {
       "current_figure": {
-        "name": "Current figure"
+        "name": "Current figure",
+        "state": {
+          "none": "None"
+        }
       },
       "last_unknown_tag": {
         "name": "Last unknown tag"

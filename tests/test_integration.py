@@ -69,7 +69,7 @@ async def test_event_routed_to_correct_box(hass, two_boxes_entry):
     assert controllers[boxes.dev_ben].state is BoxState.IDLE
     assert boxes.led["ben"] == []
     ben = boxes.box_subentry("Ben").subentry_id
-    assert _sensor_state(hass, ben, "current_figure") == "unknown"
+    assert _sensor_state(hass, ben, "current_figure") == "none"
     anna = boxes.box_subentry("Anna").subentry_id
     assert _sensor_state(hass, anna, "current_figure") == "Bobo"
 

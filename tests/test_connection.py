@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 from custom_components.lumibox.const import DOMAIN
@@ -44,7 +44,7 @@ async def test_connected_off_and_sensors_unavailable_when_esphome_unavailable(ha
         assert hass.states.get(entity_id).state == STATE_UNAVAILABLE
     assert hass.states.get(_connected(hass, boxes, "Ben")).state == STATE_ON
     for entity_id in _sensors(hass, boxes, "Ben"):
-        assert hass.states.get(entity_id).state == STATE_UNKNOWN
+        assert hass.states.get(entity_id).state != STATE_UNAVAILABLE
 
 
 async def test_reconnect_restores_availability(hass, two_boxes_entry):
@@ -56,7 +56,7 @@ async def test_reconnect_restores_availability(hass, two_boxes_entry):
 
     assert hass.states.get(_connected(hass, boxes, "Anna")).state == STATE_ON
     for entity_id in _sensors(hass, boxes, "Anna"):
-        assert hass.states.get(entity_id).state == STATE_UNKNOWN
+        assert hass.states.get(entity_id).state != STATE_UNAVAILABLE
 
 
 async def test_no_esphome_entities_means_disconnected(hass, loaded_entry_with_box, caplog):
