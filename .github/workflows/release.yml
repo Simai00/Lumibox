@@ -13,14 +13,14 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Versionen prüfen
         run: bash scripts/check-version.sh "$GITHUB_REF_NAME"
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
 
@@ -41,40 +41,41 @@ jobs:
           if [ -z "$ota_bin" ]; then echo "firmware.ota.bin nicht gefunden" >&2; exit 1; fi
           if [ -z "$factory_bin" ]; then echo "firmware.factory.bin nicht gefunden" >&2; exit 1; fi
           mkdir -p release site
+          cp web/index.html site/index.html
           cp "$factory_bin" "release/lumibox-${version}.factory.bin"
           cp "$ota_bin" "release/lumibox-${version}.ota.bin"
           python3 scripts/make-ota-manifest.py "$ota_bin" "$version" site/firmware \
             --release-url "$RELEASE_URL"
           cat site/firmware/manifest.json
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-files
           path: release/*.bin
           if-no-files-found: error
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: site
 
   release:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: release-files
           path: release
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
           files: release/*.bin
 
   deploy:
     needs: [build, release]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       pages: write
       id-token: write
@@ -83,4 +84,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

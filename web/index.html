@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lumibox</title>
+  <style>
+    :root { --bg: #ffffff; --fg: #1f2328; --muted: #59636e; --link: #0969da; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #0d1117; --fg: #e6edf3; --muted: #9198a1; --link: #4493f8; }
+    }
+    body { margin: 0; background: var(--bg); color: var(--fg);
+           font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    main { max-width: 36rem; margin: 4rem auto; padding: 0 16px; }
+    h1 { margin: 0 0 .5rem; }
+    p { color: var(--muted); }
+    a { color: var(--link); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Lumibox</h1>
+    <p>Audio-Box mit NFC-Figuren für kleine Kinder, gebaut mit ESP32, ESPHome und Home Assistant.</p>
+    <p>Diese Seite liefert die Firmware-Updates für die Boxen aus
+      (<a href="firmware/manifest.json">firmware/manifest.json</a>).
+      Anleitung, Code und Releases: <a href="https://github.com/Simai00/lumibox">github.com/Simai00/lumibox</a>.</p>
+  </main>
+</body>
+</html>
