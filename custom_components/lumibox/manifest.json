@@ -1,8 +1,17 @@
 {
   "domain": "lumibox",
   "name": "Lumibox",
-  "after_dependencies": ["esphome", "music_assistant"],
-  "codeowners": ["@Simai00"],
+  "after_dependencies": [
+    "esphome",
+    "music_assistant"
+  ],
+  "categories": [
+    "media_entertainment",
+    "diy_makers"
+  ],
+  "codeowners": [
+    "@Simai00"
+  ],
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/Simai00/lumibox",
