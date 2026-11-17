@@ -92,7 +92,8 @@ def test_check_rejects_invalid_versions(tmp_path):
         data = json.loads(manifest.read_text())
         data["version"] = bad
         manifest.write_text(json.dumps(data))
-        firmware.write_text(
-            firmware.read_text().replace('version: "0.2.0"', f'version: "{bad}"', 1)
-        )
+        current = f'version: "{_current_version()}"'
+        text = firmware.read_text()
+        assert current in text
+        firmware.write_text(text.replace(current, f'version: "{bad}"', 1))
         assert _run(CHECK, [], (manifest, firmware)).returncode == 1

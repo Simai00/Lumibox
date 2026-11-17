@@ -104,7 +104,7 @@ Die Helligkeit ist mit `color_correct: [50%, 50%, 50%]` hart begrenzt (Strom, Bl
 
 - **Eine Versionsnummer** für Integration (`manifest.json`) und Firmware (`substitutions.version`). Setzen mit `scripts/bump-version.sh X.Y.Z`, prüfen mit `scripts/check-version.sh [vX.Y.Z]`.
 - **Release:** Ein Tag `vX.Y.Z` startet `.github/workflows/release.yml`:
-  1. Versionen prüfen; bei einem Widerspruch Abbruch, bevor etwas veröffentlicht wird.
+  1. Tests laufen lassen und Versionen prüfen; bei einem Fehler Abbruch, bevor etwas veröffentlicht wird.
   2. Firmware bauen.
   3. GitHub-Release mit den `.bin`-Dateien erstellen (davon installiert der Marketplace die Integration).
   4. Erst danach Manifest und OTA-Datei auf GitHub Pages veröffentlichen (`scripts/make-ota-manifest.py`).
