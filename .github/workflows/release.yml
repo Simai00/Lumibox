@@ -1,0 +1,83 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Versionen prüfen
+        run: bash scripts/check-version.sh "$GITHUB_REF_NAME"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Firmware bauen
+        run: |
+          pip install esphome==2026.10.0
+          esphome compile esphome/lumibox.yaml
+
+      - name: Artefakte und Manifest erzeugen
+        env:
+          VERSION_TAG: ${{ github.ref_name }}
+          RELEASE_URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}
+        run: |
+          version="${VERSION_TAG#v}"
+          # Pfad unterscheidet sich je nach ESPHome-Version (build/ oder .pioenvs/<name>/).
+          ota_bin="$(find esphome/.esphome/build/lumibox -name firmware.ota.bin | head -n1)"
+          factory_bin="$(find esphome/.esphome/build/lumibox -name firmware.factory.bin | head -n1)"
+          test -n "$ota_bin" && test -n "$factory_bin"
+          mkdir -p release site
+          cp "$factory_bin" "release/lumibox-${version}.factory.bin"
+          cp "$ota_bin" "release/lumibox-${version}.ota.bin"
+          python3 scripts/make-ota-manifest.py "$ota_bin" "$version" site/firmware \
+            --release-url "$RELEASE_URL"
+          cat site/firmware/manifest.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-files
+          path: release/*.bin
+          if-no-files-found: error
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-files
+          path: release
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: release/*.bin
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
