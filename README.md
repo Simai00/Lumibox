@@ -2,7 +2,7 @@
 
 # Lumibox
 
-Eine quelloffene, physische Audio-Steuerbox auf Basis eines ESP32, ESPHome und Home Assistant. Audio-Box mit NFC-Figuren für kleine Kinder: Das Auflegen und Abheben von mit NFC-Tags versehenen 3D-Druck-Figuren steuert die Musik- und Hörspielwiedergabe auf beliebigen vernetzten Smart Speakern.
+Eine quelloffene Audio-Box mit NFC-Figuren für kleine Kinder, gebaut mit ESP32, ESPHome und Home Assistant. Figur auflegen, und Musik oder Hörspiel läuft auf dem Lautsprecher im Zimmer. Figur abnehmen, und die Wiedergabe pausiert.
 
 ## Hardware
 
