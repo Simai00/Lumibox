@@ -110,6 +110,24 @@ Der Marketplace (ehemals HACS) zeigt ein verfügbares Update an. Dort "Aktualisi
 
 **Figuren anlernen:** Eine unbekannte Figur auf eine Box legen. Die Box blinkt rot und Home Assistant zeigt eine Benachrichtigung mit der UID. Dann bei "Lumibox" "Figur hinzufügen" wählen: Die UID ist bereits eingetragen, es fehlen nur Name und Spotify-Link. Nach dem Speichern die Figur einmal abheben und wieder auflegen, damit sie zu spielen beginnt.
 
+## Was die LED an der Box zeigt
+
+| LED | Bedeutung |
+| :--- | :--- |
+| weiss, langsam atmend | Box startet und verbindet sich (höchstens ~1 Minute) |
+| grün, einmal rundherum | Bereit, mit Home Assistant verbunden |
+| blau, langsam atmend | Setup-WLAN „Lumibox Setup“ ist offen, die Box hat noch kein WLAN |
+| cyan, füllt sich | Firmware-Update läuft, Box nicht vom Strom trennen |
+| rot, 2× pulsierend | Kein WLAN |
+| orange, 2× pulsierend | WLAN da, aber keine Verbindung zu Home Assistant |
+| magenta, 2× pulsierend | NFC-Leser defekt |
+| rot, 3× blinkend | Unbekannte Figur |
+| rot, ca. 3 s | Fehler bei der Wiedergabe |
+
+Fehler zeigt die Box nach dem Start und kurz bei jeder Bedienung (Figur auflegen, Taster, Encoder), nicht dauerhaft. Fällt die Verbindung im Betrieb weg, bleibt die LED zunächst dunkel; der Fehler erscheint bei der nächsten Bedienung.
+
+In Home Assistant zeigt der Sensor **„Verbunden“** beim Gerät der Box, ob sie erreichbar ist. Ist sie es nicht, stehen ihre Lumibox-Sensoren auf „Nicht verfügbar“.
+
 ## Manuelle Testcheckliste
 
 **Events (Entwicklerwerkzeuge, Ereignisse, auf `esphome.lumibox` lauschen):**

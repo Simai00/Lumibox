@@ -67,6 +67,26 @@ API-Action `set_led(mode: string, level: int, r: int, g: int, b: int)`. In HA he
 
 Die Helligkeit ist mit `color_correct: [50%, 50%, 50%]` hart begrenzt (Strom, Blendung).
 
+### Lokale Status-Anzeige
+
+Die Box zeigt ihre Zustände selbst an, auch ohne Home Assistant. Diese Muster kommen aus der Firmware, nicht aus `set_led`.
+
+| Zustand | Muster | Wann / wie lange |
+| :--- | :--- | :--- |
+| Startet / verbindet | weiss, langsam atmend | ab Boot bis HA verbunden, höchstens ~60 s |
+| Bereit | grün einmal rundherum füllen, dann aus | ~1,5 s, sobald HA verbunden ist (nach Boot und nach Wiederverbindung) |
+| Setup-WLAN aktiv | blau, langsam atmend | dauerhaft, solange der AP „Lumibox Setup“ offen ist und noch keine WLAN-Daten gespeichert sind |
+| Firmware-Update | cyan Füllstand = Fortschritt | dauerhaft während des Updates |
+| Kein WLAN | rot, 2× langsam pulsieren | ~4 s |
+| WLAN ja, HA nein | orange, 2× langsam pulsieren | ~4 s |
+| NFC-Leser defekt | magenta, 2× langsam pulsieren | ~4 s |
+
+- **Fehler zeigen:** Nach dem Start (wenn die Startphase ohne HA-Verbindung endet) und bei jeder Bedienung (Figur, Taster, Encoder), solange der Fehler besteht. Danach LED aus. Ein Verbindungsverlust im Betrieb wird nicht von selbst angezeigt (kein dauerhaftes Fehlerleuchten), erst bei der nächsten Bedienung.
+- **Setup-WLAN vs. Kein WLAN:** Blau atmend gibt es nur, wenn die Box noch keine WLAN-Daten gespeichert hat. Ist das bekannte WLAN weg (der Fallback-AP ist offen), gilt das als Fehler „Kein WLAN“.
+- **NFC-Leser defekt** wird nur nach dem Start (nach „Bereit“ bzw. nach dem Start-Timeout) gezeigt, nicht bei jeder Bedienung.
+- **Fehler-Priorität:** Kein WLAN vor „WLAN ja, HA nein“.
+- **Vorrang:** Lokale Anzeigen (Start, Setup, Update, Fehler) haben Vorrang vor `set_led`. Ein `set_led` währenddessen wird gemerkt und danach wiederhergestellt.
+
 ## Integration (`custom_components/lumibox`)
 
 ### Datenmodell
@@ -86,8 +106,14 @@ Die Helligkeit ist mit `color_correct: [50%, 50%, 50%]` hart begrenzt (Strom, Bl
 | `player.py` | Wiedergabe über Music Assistant und `media_player.*` |
 | `led.py` | Ruft `esphome.<gerät>_set_led` auf |
 | `sensor.py` | Pro Box: aktuelle Figur, letzter unbekannter Tag |
+| `binary_sensor.py` | Pro Box: Sensor „Verbunden“ (Klasse Konnektivität) |
+| `connection.py` | `BoxConnection`: leitet aus den ESPHome-Entitäten der Box ab, ob das Gerät verbunden ist (die Dashboard-Update-Entität zählt nicht, Hilfsfunktion `is_device_entity`) |
 | `firmware.py` | Prüft die Firmware-Version jeder Box gegen `MIN_FIRMWARE_VERSION` und erstellt bzw. entfernt den Reparatur-Hinweis |
 | `repairs.py` | Knopf „Jetzt aktualisieren“: startet `update.install` auf der Update-Entität der Box |
+
+### Sensor „Verbunden“
+
+Pro Box gibt es einen Binary-Sensor „Verbunden“. Er ist an, solange das ESPHome-Gerät der Box erreichbar ist. Ist die Box nicht verbunden, sind ihre Lumibox-Sensoren „nicht verfügbar“ (statt „unbekannt“, was wie „keine Figur“ aussähe).
 
 ### Verhalten pro Box
 
