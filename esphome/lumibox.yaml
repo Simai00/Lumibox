@@ -265,19 +265,24 @@ globals:
 interval:
   - interval: 500ms
     then:
+      # Setup-Anzeige nur, wenn der AP offen ist UND keine WLAN-Daten gespeichert sind.
+      # Ist der AP offen, weil ein bekanntes WLAN fehlt (Router aus), ist das der Fehler
+      # "Kein WLAN" (nur nach Start/bei Interaktion), kein Dauerleuchten.
       - if:
           condition:
             and:
               - wifi.ap_active:
-              - lambda: 'return !id(status_setup);'
+              - lambda: 'return !wifi::global_wifi_component->has_sta() && !id(status_setup);'
           then:
             - script.execute: status_setup_begin
       - if:
           condition:
             and:
-              - not:
-                  wifi.ap_active:
               - lambda: 'return id(status_setup);'
+              - or:
+                  - not:
+                      wifi.ap_active:
+                  - lambda: 'return wifi::global_wifi_component->has_sta();'
           then:
             - script.execute: status_setup_end
       # Nur Clients mit Zustands-Abo (HA) zählen, nicht z. B. ein Log-Fenster im Dashboard.
@@ -566,11 +571,8 @@ script:
           blue: 100%
           effect: "Atmen"
       - delay: 60s
-      # Startphase ohne HA beendet: Fehler einmal zeigen, dann aus
-      - lambda: |-
-          id(status_boot_phase) = false;
-          id(status_active) = false;
-      - script.execute: led_restore
+      # Startphase ohne HA beendet: Fehler einmal zeigen, danach stellt status_fault_show wieder her
+      - lambda: 'id(status_boot_phase) = false;'
       - script.execute: status_fault_show
 
   # Bereit: grün einmal rundherum füllen (~1,5 s), danach wieder der Modus von HA.
@@ -734,12 +736,18 @@ script:
       - script.stop: status_ready
       - script.stop: status_fault_show
       - script.stop: led_show
+      # Zwei Aufrufe: Ohne Effekt und mit Übergang 0 werden die Werte sofort übernommen
+      # (set_immediately_, bricht laufende Übergänge ab). Mit Effekt übernimmt ESPHome die Werte
+      # nur beim Effektwechsel, und der Effekt ist hier ggf. schon aktiv.
       - light.turn_on:
           id: status_led_ring
           brightness: 100%
           red: 0%
           green: 100%
           blue: 100%
+          transition_length: 0s
+      - light.turn_on:
+          id: status_led_ring
           effect: "Update-Fortschritt"
       - script.execute: status_update_draw
 
@@ -749,7 +757,11 @@ script:
     mode: restart
     then:
       - lambda: |-
-          auto *out = static_cast<light::AddressableLight *>(id(status_led_ring)->get_output());
+          auto *ls = id(status_led_ring);
+          auto *out = static_cast<light::AddressableLight *>(ls->get_output());
+          // Helligkeit der Farbkorrektur aus current_values setzen (sonst nur in LightState::loop);
+          // bei aktivem Effekt überschreibt update_state die Pixel nicht.
+          out->update_state(ls);
           const int n = out->size();
           const int lit = (int) (id(status_ota_progress) * n / 100.0f + 0.5f);
           const Color c(0, 255, 255);
