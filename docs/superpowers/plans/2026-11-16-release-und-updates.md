@@ -250,6 +250,7 @@ Diese Schritte macht der Nutzer selbst. Der Umsetzer hilft dabei, führt aber ni
    - Repo in `lumibox` umbenennen;
    - Beschreibung und Topics setzen (`home-assistant`, `hacs`, `esphome`, `nfc`);
    - Pages mit Quelle „GitHub Actions“ aktivieren;
+   - Settings › Environments › github-pages › Deployment branches and tags: Regel für Tags `v*` hinzufügen (sonst scheitert das Deploy bei Tag-Läufen);
    - Repo auf **public** stellen.
 4. **Release:** `git tag v0.2.0 && git push origin v0.2.0`. Danach prüfen, ob `https://simai00.github.io/lumibox/firmware/manifest.json` erreichbar ist und ob das Release Assets hat.
 5. **Pro Box:**

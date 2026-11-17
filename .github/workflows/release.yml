@@ -5,9 +5,7 @@ on:
     tags: ["v*"]
 
 permissions:
-  contents: write
-  pages: write
-  id-token: write
+  contents: read
 
 concurrency:
   group: release
@@ -25,7 +23,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-          cache: pip
 
       - name: Firmware bauen
         run: |
@@ -41,7 +38,8 @@ jobs:
           # Pfad unterscheidet sich je nach ESPHome-Version (build/ oder .pioenvs/<name>/).
           ota_bin="$(find esphome/.esphome/build/lumibox -name firmware.ota.bin | head -n1)"
           factory_bin="$(find esphome/.esphome/build/lumibox -name firmware.factory.bin | head -n1)"
-          test -n "$ota_bin" && test -n "$factory_bin"
+          if [ -z "$ota_bin" ]; then echo "firmware.ota.bin nicht gefunden" >&2; exit 1; fi
+          if [ -z "$factory_bin" ]; then echo "firmware.factory.bin nicht gefunden" >&2; exit 1; fi
           mkdir -p release site
           cp "$factory_bin" "release/lumibox-${version}.factory.bin"
           cp "$ota_bin" "release/lumibox-${version}.ota.bin"
@@ -62,6 +60,8 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -73,8 +73,11 @@ jobs:
           files: release/*.bin
 
   deploy:
-    needs: build
+    needs: [build, release]
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
